@@ -18,14 +18,14 @@ export default async (req, context) => {
     const { data: tweets, error: fetchErr } = await sb
       .from('tweets')
       .select('*')
-      .eq('status', 'pending')
+      .eq('status', 'approved')
       .order('created_at', { ascending: true })
       .limit(1);
 
     if (fetchErr) throw new Error(`Fetch tweets: ${fetchErr.message}`);
     if (!tweets?.length) {
-      await logSync(sb, { functionName: 'post-tweet', status: 'success', recordsAffected: 0, message: 'No pending tweets', durationMs: Date.now() - start });
-      return jsonResponse({ ok: true, posted: 0, reason: 'No pending tweets' });
+      await logSync(sb, { functionName: 'post-tweet', status: 'success', recordsAffected: 0, message: 'No approved tweets to post', durationMs: Date.now() - start });
+      return jsonResponse({ ok: true, posted: 0, reason: 'No approved tweets to post' });
     }
 
     const tweet = tweets[0];
@@ -75,7 +75,7 @@ export default async (req, context) => {
   } catch (err) {
     // If posting failed, mark the tweet as failed
     try {
-      const { data: pending } = await sb.from('tweets').select('id').eq('status', 'pending').order('created_at', { ascending: true }).limit(1);
+      const { data: pending } = await sb.from('tweets').select('id').eq('status', 'approved').order('created_at', { ascending: true }).limit(1);
       if (pending?.length) {
         await sb.from('tweets').update({ status: 'failed' }).eq('id', pending[0].id);
       }
