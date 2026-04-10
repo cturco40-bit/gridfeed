@@ -624,29 +624,22 @@ async function approveDraft(id){
   const tags=getSelectedTags();
   if(!body){toast('Article body is empty','error');return}
 
-  const publishAt=getPublishTime();
-  const slug=makeSlug(title||'untitled');
-
-  // 1. Insert into articles
-  const{data:article,error:insertErr}=await sb.from('articles').insert({
-    title,slug,body,excerpt,tags,author:'GridFeed Staff',status:'published',published_at:publishAt
-  }).select('id').single();
-
-  if(insertErr){toast('Publish failed: '+insertErr.message,'error');return}
-
-  // 2. Update draft
-  await sb.from('content_drafts').update({
-    review_status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:'admin',
-    published_article_id:article?.id,title,body,excerpt,tags
-  }).eq('id',id);
-
-  toast('\u2713 Published: '+title,'success');
-  setTimeout(()=>{nextDraft()},1500);
-  await refreshAll();
+  toast('Publishing...','info');
+  try{
+    const res=await fetch('/.netlify/functions/approve-draft',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id,title,articleBody:body,excerpt,tags})
+    });
+    const data=await res.json();
+    if(data.error){toast('Publish failed: '+data.error,'error');return}
+    toast('\u2713 Published: '+title,'success');
+    setTimeout(()=>{nextDraft()},1500);
+    await refreshAll();
+  }catch(e){toast('Publish failed: '+e.message,'error')}
 }
 
 async function rejectDraft(id){
-  await sb.from('content_drafts').update({review_status:'rejected',reviewed_at:new Date().toISOString(),reviewed_by:'admin'}).eq('id',id);
+  await fetch('/.netlify/functions/reject-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,type:'draft'})}).catch(()=>{});
   toast('Rejected','error');
   nextDraft();
   await refreshAll();
@@ -745,14 +738,20 @@ function updateTweetCount(){
 
 async function approveTweet(id){
   const text=document.getElementById('twText')?.value?.trim();
-  if(text){await sb.from('tweets').update({tweet_text:text}).eq('id',id)}
-  await sb.from('tweets').update({status:'approved'}).eq('id',id);
-  toast('\u2713 Tweet approved \u2014 posts next run','success');
+  try{
+    const res=await fetch('/.netlify/functions/approve-tweet',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id,tweet_text:text})
+    });
+    const data=await res.json();
+    if(data.error){toast('Failed: '+data.error,'error');return}
+    toast('\u2713 Tweet approved \u2014 posts next run','success');
+  }catch(e){toast('Failed: '+e.message,'error')}
   selectedId=null;await refreshAll();
 }
 
 async function rejectTweet(id){
-  await sb.from('tweets').update({status:'failed'}).eq('id',id);
+  await fetch('/.netlify/functions/reject-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,type:'tweet'})}).catch(()=>{});
   toast('Tweet rejected','error');
   selectedId=null;await refreshAll();
 }
