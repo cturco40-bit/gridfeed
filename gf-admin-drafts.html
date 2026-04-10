@@ -1,472 +1,776 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GridFeed Admin — Draft Queue</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --bg: #F5F5F5; --card: #fff; --accent: #E8002D; --text: #1B1F2A;
-      --dim: #4A4E5A; --muted: #8A8E9A; --border: #E0E0E8; --green: #16A34A; --red: #DC2626;
-      --blue: #2563EB;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; line-height: 1.5; padding: 20px; }
-    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-    .header h1 { font-size: 22px; font-weight: 700; }
-    .header .badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 3px; }
-    .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-    .filter-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-    .filter-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
-    .section-heading { font-size: 18px; font-weight: 700; margin: 32px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 10px; }
-    .section-heading .count-badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-    .draft-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
-    .draft-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
-    .draft-title { font-weight: 700; font-size: 15px; flex: 1; }
-    .draft-type { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; background: #EFF6FF; color: #1E40AF; }
-    .draft-status { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; }
-    .status-pending { background: #FEF3C7; color: #92400E; }
-    .status-approved { background: #DCFCE7; color: #166534; }
-    .status-rejected, .status-failed { background: #FEE2E2; color: #991B1B; }
-    .status-posted { background: #DCFCE7; color: #166534; }
-    .draft-body { padding: 16px 18px; font-size: 13px; color: var(--dim); white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-    .draft-meta { display: flex; align-items: center; gap: 12px; padding: 10px 18px; background: #FAFAFA; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); flex-wrap: wrap; }
-    .draft-actions { display: flex; gap: 8px; margin-left: auto; }
-    .btn { padding: 6px 16px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
-    .btn-approve { background: var(--green); color: #fff; }
-    .btn-approve:hover { background: #15803D; }
-    .btn-reject { background: var(--red); color: #fff; }
-    .btn-reject:hover { background: #B91C1C; }
-    .btn-edit { background: var(--border); color: var(--text); }
-    .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
-    .stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-    .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 18px; min-width: 100px; }
-    .stat-num { font-size: 24px; font-weight: 700; }
-    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--text); color: #fff; padding: 12px 20px; border-radius: 6px; font-size: 13px; font-weight: 500; display: none; z-index: 100; }
-    .toast.show { display: block; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GridFeed Admin — Draft Review</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0E1117;--surface:#161B27;--card:#1C2333;--border:#2A3145;
+  --accent:#E8002D;--gold:#F5A623;--green:#22C55E;--red:#EF4444;--blue:#3B82F6;
+  --text:#E8EAF0;--dim:#8A90A0;--muted:#4A5068;
+  --font:'DM Sans',sans-serif;--head:'Barlow Condensed',sans-serif;
+  --sidebar-w:280px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
+button{cursor:pointer;border:none;background:none;font-family:var(--font);color:var(--text)}
+input,textarea,select{font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:8px 12px;outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-    /* Tweet card styles */
-    .tweet-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
-    .tweet-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-    .tweet-article-link { font-size: 12px; color: var(--blue); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tweet-body { padding: 14px 16px; }
-    .tweet-text { font-size: 14px; color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-    .tweet-text-edit { width: 100%; min-height: 60px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 14px; resize: vertical; display: none; }
-    .tweet-char-count { font-size: 11px; margin-top: 6px; font-weight: 600; }
-    .tweet-char-ok { color: var(--muted); }
-    .tweet-char-warn { color: #F59E0B; }
-    .tweet-char-over { color: var(--red); }
-    .tweet-meta { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #FAFAFA; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
-    .tweet-posted-check { color: var(--green); font-weight: 700; }
+/* ═══ LOGIN ═══ */
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:2000}
+.login-box{width:340px;text-align:center}
+.login-logo{font-family:var(--font);font-weight:900;font-size:32px;letter-spacing:3px;margin-bottom:32px}
+.login-logo .g{color:#fff}.login-logo .f{color:var(--accent)}
+.login-input{width:100%;padding:12px 16px;font-size:15px;margin-bottom:12px;text-align:center}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;border-radius:4px;letter-spacing:1px}
+.login-btn:hover{background:#c50026}
+.login-err{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.shake{animation:shake .3s}
 
-    /* Modal for editing drafts */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 50; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: var(--card); border-radius: 8px; width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; padding: 24px; }
-    .modal h2 { font-size: 18px; margin-bottom: 16px; }
-    .modal label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--dim); }
-    .modal input, .modal textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 13px; margin-bottom: 12px; }
-    .modal textarea { min-height: 200px; resize: vertical; }
-    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
-  </style>
+/* ═══ HEADER ═══ */
+.admin-header{
+  height:56px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:16px;position:sticky;top:0;z-index:100;
+}
+.hdr-logo{font-family:var(--font);font-weight:900;font-size:18px;letter-spacing:2px;white-space:nowrap}
+.hdr-logo .g{color:#fff}.hdr-logo .f{color:var(--accent)}
+.hdr-sub{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-left:4px}
+.hdr-center{flex:1;text-align:center;font-size:12px;color:var(--dim)}
+.hdr-pills{display:flex;gap:8px;align-items:center}
+.hdr-pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;background:var(--card);border:1px solid var(--border);white-space:nowrap}
+.pill-gold{border-color:var(--gold);color:var(--gold)}
+.pill-green{border-color:var(--green);color:var(--green)}
+.pill-red{border-color:var(--red);color:var(--red)}
+.pill-blue{border-color:var(--blue);color:var(--blue)}
+.hdr-refresh{font-size:18px;color:var(--dim);padding:4px 8px;border-radius:4px}
+.hdr-refresh:hover{background:var(--card);color:var(--text)}
+
+/* ═══ LAYOUT ═══ */
+.admin-layout{display:flex;height:calc(100vh - 56px)}
+.admin-sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.admin-main{flex:1;overflow-y:auto;padding:24px;background:var(--bg)}
+
+/* ═══ SIDEBAR TABS ═══ */
+.sidebar-tabs{display:flex;flex-direction:column;gap:2px;padding:12px 10px;border-bottom:1px solid var(--border)}
+.tab-btn{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:4px;
+  font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);
+  transition:all .15s;text-align:left;
+}
+.tab-btn.active{background:var(--card);color:var(--text);border-left:3px solid var(--accent)}
+.tab-btn:hover:not(.active){background:rgba(255,255,255,.03)}
+.tab-badge{
+  margin-left:auto;font-size:10px;font-weight:700;min-width:20px;height:20px;
+  display:flex;align-items:center;justify-content:center;border-radius:10px;
+  background:var(--accent);color:#fff;
+}
+.tab-badge:empty{display:none}
+
+/* ═══ SIDEBAR LIST ═══ */
+.sidebar-list{flex:1;overflow-y:auto;padding:6px}
+.sidebar-item{
+  padding:10px 12px;border-radius:4px;cursor:pointer;border-left:3px solid transparent;
+  margin-bottom:2px;transition:all .1s;
+}
+.sidebar-item:hover{background:rgba(255,255,255,.03)}
+.sidebar-item.active{background:rgba(232,0,45,.06);border-left-color:var(--accent)}
+.si-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.si-priority{font-size:10px}
+.si-type{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:1px 6px;border-radius:2px;background:var(--card);color:var(--dim)}
+.si-time{font-size:10px;color:var(--muted);margin-left:auto}
+.si-title{font-family:var(--head);font-size:13px;font-weight:700;text-transform:uppercase;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.si-meta{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:10px;color:var(--muted)}
+.si-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-pending{background:var(--gold)}.dot-approved{background:var(--green)}.dot-rejected{background:var(--red)}.dot-posted{background:var(--green)}.dot-failed{background:var(--red)}
+.si-chars{font-size:10px;font-weight:700}
+.chars-ok{color:var(--green)}.chars-warn{color:var(--red)}
+
+/* ═══ MAIN PANEL ═══ */
+.panel-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:14px;text-align:center;padding:40px}
+
+/* ═══ ARTICLE EDITOR ═══ */
+.editor-title{
+  width:100%;font-family:var(--head);font-size:28px;font-weight:800;text-transform:uppercase;
+  background:transparent;border:1px solid transparent;padding:8px 0;color:var(--text);
+}
+.editor-title:focus{border-color:var(--border);padding:8px 12px}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.tag-pill{
+  font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:4px 10px;border-radius:3px;cursor:pointer;border:1px solid var(--border);
+  color:var(--dim);transition:all .15s;
+}
+.tag-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.meta-row{font-size:11px;color:var(--muted);margin:8px 0 16px;display:flex;gap:12px;flex-wrap:wrap}
+.editor-grid{display:grid;grid-template-columns:1fr 320px;gap:20px}
+@media(max-width:1200px){.editor-grid{grid-template-columns:1fr}}
+.editor-excerpt{width:100%;min-height:60px;font-style:italic;font-size:14px;resize:vertical;margin-bottom:12px;line-height:1.6}
+.editor-body{width:100%;min-height:400px;font-size:14px;line-height:1.75;resize:vertical}
+.word-count{font-size:11px;margin-top:6px;font-weight:600}
+.wc-ok{color:var(--green)}.wc-warn{color:var(--gold)}.wc-bad{color:var(--red)}
+
+/* ═══ SOURCE BOX ═══ */
+.source-box{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:16px}
+.source-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.source-item{font-size:12px;color:var(--dim);padding:4px 0;border-bottom:1px solid var(--border)}
+.source-item:last-child{border-bottom:none}
+
+/* ═══ TIMING RADIOS ═══ */
+.timing-group{margin-bottom:16px}
+.timing-opt{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;cursor:pointer;color:var(--dim)}
+.timing-opt input{accent-color:var(--accent)}
+.timing-opt.selected{color:var(--text)}
+
+/* ═══ ACTION BUTTONS ═══ */
+.actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.act-btn{
+  padding:12px 16px;border-radius:4px;font-size:13px;font-weight:700;
+  letter-spacing:.5px;display:flex;align-items:center;gap:8px;justify-content:center;
+  transition:all .15s;min-height:44px;
+}
+.act-approve{background:var(--green);color:#fff}.act-approve:hover{background:#1aab53}
+.act-reject{background:transparent;color:var(--red);border:1px solid var(--red)}.act-reject:hover{background:rgba(239,68,68,.1)}
+.act-save{background:transparent;color:var(--gold);border:1px solid var(--gold)}.act-save:hover{background:rgba(245,166,35,.1)}
+.act-regen{background:var(--card);color:var(--dim);border:1px solid var(--border)}.act-regen:hover{color:var(--text)}
+.act-next{background:var(--card);color:var(--dim);border:1px solid var(--border)}.act-next:hover{color:var(--text)}
+.kb-hints{font-size:10px;color:var(--muted);margin-top:8px;text-align:center;letter-spacing:.5px}
+
+/* ═══ TWEET EDITOR ═══ */
+.tweet-textarea{width:100%;min-height:100px;font-size:16px;line-height:1.5;resize:vertical;margin-bottom:8px}
+.tweet-counter{font-family:var(--head);font-size:48px;font-weight:800;text-align:center;margin:12px 0}
+.tweet-counter.ok{color:var(--green)}.tweet-counter.warn{color:var(--gold)}.tweet-counter.over{color:var(--red)}
+.char-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:16px}
+.char-bar-fill{height:100%;border-radius:2px;transition:width .2s}
+.tweet-preview{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px;margin-bottom:16px;font-size:14px;
+}
+.tweet-preview-header{font-size:12px;color:var(--muted);margin-bottom:8px}
+.tweet-preview-header strong{color:var(--text)}
+.tweet-preview-text{color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.5}
+.tweet-preview-link{color:var(--blue);font-size:12px;margin-top:6px}
+
+/* ═══ QUEUE TABLE ═══ */
+.queue-table{width:100%;border-collapse:collapse;font-size:12px}
+.queue-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border)}
+.queue-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.queue-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.qs-success{background:rgba(34,197,94,.15);color:var(--green)}
+.qs-error{background:rgba(239,68,68,.15);color:var(--red)}
+.run-btn{font-size:10px;font-weight:700;color:var(--blue);cursor:pointer;padding:4px 8px;border-radius:3px;border:1px solid var(--blue)}
+.run-btn:hover{background:rgba(59,130,246,.1)}
+
+/* ═══ APPROVED/REJECTED LIST ═══ */
+.history-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.history-icon{font-size:16px;min-width:24px;text-align:center}
+.history-title{flex:1;font-weight:500}
+.history-time{font-size:11px;color:var(--muted)}
+.history-link{font-size:11px;color:var(--blue);cursor:pointer}
+.restore-btn{font-size:10px;color:var(--gold);border:1px solid var(--gold);padding:3px 8px;border-radius:3px;cursor:pointer}
+.restore-btn:hover{background:rgba(245,166,35,.1)}
+
+/* ═══ TOAST ═══ */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:12px 20px;border-radius:6px;font-size:13px;font-weight:500;
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  animation:toastIn .3s;min-width:240px;
+}
+.toast-success{border-color:var(--green)}.toast-error{border-color:var(--red)}.toast-info{border-color:var(--gold)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ SPINNER ═══ */
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .6s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.skeleton{height:14px;background:var(--border);border-radius:3px;animation:skel 1.2s infinite}
+@keyframes skel{0%,100%{opacity:.4}50%{opacity:.8}}
+
+/* ═══ MOBILE ═══ */
+@media(max-width:768px){
+  .admin-sidebar{display:none}
+  .admin-main{padding:16px}
+  .editor-grid{grid-template-columns:1fr}
+  .hdr-center,.hdr-pills{display:none}
+}
+</style>
 </head>
 <body>
 
-<div class="header">
-  <h1>GridFeed Admin</h1>
-  <span class="badge">DRAFT QUEUE</span>
-</div>
-
-<div class="stats" id="stats"></div>
-
-<!-- ═══════ ARTICLE DRAFTS ═══════ -->
-<div class="section-heading">Article Drafts <span class="count-badge" id="draftCountBadge">0</span></div>
-
-<div class="filters" id="filters">
-  <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
-  <button class="filter-btn" onclick="setFilter('pending', this)">Pending</button>
-  <button class="filter-btn" onclick="setFilter('approved', this)">Approved</button>
-  <button class="filter-btn" onclick="setFilter('rejected', this)">Rejected</button>
-</div>
-
-<div id="draftsList"></div>
-
-<!-- ═══════ TWEETS ═══════ -->
-<div class="section-heading">Tweets <span class="count-badge" id="tweetCountBadge">0</span></div>
-
-<div class="filters" id="tweetFilters">
-  <button class="filter-btn active" onclick="setTweetFilter('all', this)">All</button>
-  <button class="filter-btn" onclick="setTweetFilter('pending', this)">Pending</button>
-  <button class="filter-btn" onclick="setTweetFilter('approved', this)">Approved</button>
-  <button class="filter-btn" onclick="setTweetFilter('posted', this)">Posted</button>
-  <button class="filter-btn" onclick="setTweetFilter('failed', this)">Failed</button>
-</div>
-
-<div id="tweetsList"></div>
-
-<div class="toast" id="toast"></div>
-
-<!-- Edit Draft Modal -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <h2>Edit Draft</h2>
-    <input type="hidden" id="editId" />
-    <label>Title</label>
-    <input type="text" id="editTitle" />
-    <label>Excerpt</label>
-    <input type="text" id="editExcerpt" />
-    <label>Body</label>
-    <textarea id="editBody"></textarea>
-    <div class="modal-actions">
-      <button class="btn btn-edit" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-approve" onclick="saveEdit()">Save</button>
-    </div>
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><span class="g">GRID</span><span class="f">FEED</span></div>
+    <input type="password" class="login-input" id="loginPw" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Access Drafts</button>
+    <div class="login-err" id="loginErr"></div>
   </div>
 </div>
+
+<!-- ═══ APP ═══ -->
+<div id="appContainer" style="display:none;height:100vh;display:none;flex-direction:column">
+
+<!-- HEADER -->
+<div class="admin-header">
+  <div class="hdr-logo"><span class="g">GRID</span><span class="f">FEED</span><span class="hdr-sub">Draft Review</span></div>
+  <div class="hdr-center" id="hdrCenter"></div>
+  <div class="hdr-pills" id="hdrPills"></div>
+  <button class="hdr-refresh" onclick="refreshAll()" title="Refresh">&#8634;</button>
+</div>
+
+<!-- LAYOUT -->
+<div class="admin-layout">
+  <!-- SIDEBAR -->
+  <div class="admin-sidebar">
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" data-tab="articles" onclick="switchAdminTab('articles',this)">&#128196; Articles <span class="tab-badge" id="badgeArticles"></span></button>
+      <button class="tab-btn" data-tab="tweets" onclick="switchAdminTab('tweets',this)">&#128038; Tweets <span class="tab-badge" id="badgeTweets"></span></button>
+      <button class="tab-btn" data-tab="approved" onclick="switchAdminTab('approved',this)">&#9989; Approved</button>
+      <button class="tab-btn" data-tab="rejected" onclick="switchAdminTab('rejected',this)">&#10060; Rejected</button>
+      <button class="tab-btn" data-tab="queue" onclick="switchAdminTab('queue',this)">&#9881; Queue</button>
+    </div>
+    <div class="sidebar-list" id="sidebarList"><div style="padding:20px;text-align:center"><div class="spin"></div></div></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="admin-main" id="mainPanel"><div class="panel-empty">Select an item from the sidebar</div></div>
+</div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container" id="toasts"></div>
 
 <script>
 'use strict';
 
-const SUPABASE_URL = 'https://jrkptskwmdtbcucmqwft.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impya3B0c2t3bWR0YmN1Y21xd2Z0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NTY2MTksImV4cCI6MjA5MTMzMjYxOX0.oz9DUA4YtwxtJLbL-fpYTC9VstJ0B-tNC0B3wwiyRtk';
+/* ═══ CONFIG ═══ */
+const SUPA_URL='https://jrkptskwmdtbcucmqwft.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impya3B0c2t3bWR0YmN1Y21xd2Z0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NTY2MTksImV4cCI6MjA5MTMzMjYxOX0.oz9DUA4YtwxtJLbL-fpYTC9VstJ0B-tNC0B3wwiyRtk';
+const ADMIN_PASS='f3rrar1!';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* ═══ STATE ═══ */
+let drafts=[],tweets=[],syncLogs=[],topics=[];
+let activeTab='articles',selectedId=null,isEditing=false;
 
-let allDrafts = [];
-let allTweets = [];
-let articleMap = {};
-let currentFilter = 'all';
-let tweetFilter = 'all';
+const CRONS=[
+  {name:'fetch-timing',   cron:'*/2 * * * *',  label:'Fetch Timing'},
+  {name:'fetch-news',     cron:'*/10 * * * *', label:'Fetch News'},
+  {name:'publish-approved',cron:'*/5 * * * *', label:'Publish Approved'},
+  {name:'generate-content',cron:'*/30 * * * *',label:'Generate Content'},
+  {name:'fetch-odds',     cron:'0 */6 * * *',  label:'Fetch Odds'},
+  {name:'blog-scheduler', cron:'0 6 * * *',    label:'Blog Scheduler'},
+  {name:'generate-picks', cron:'0 5 * * *',    label:'Generate Picks'},
+  {name:'generate-tweets', cron:'0 10 * * *',  label:'Generate Tweets'},
+  {name:'post-tweet',     cron:'20 10 * * *',  label:'Post Tweet'},
+];
+const TAGS=['RACE','QUALIFYING','BETTING','PREVIEW','ANALYSIS','BREAKING'];
 
-/* ═══════ LOAD DATA ═══════ */
-async function loadAll() {
-  await Promise.all([loadDrafts(), loadTweets()]);
-  renderStats();
+/* ═══ LOGIN ═══ */
+function doLogin(){
+  const pw=document.getElementById('loginPw').value;
+  if(pw===ADMIN_PASS){
+    sessionStorage.setItem('gf_admin','1');
+    showApp();
+  }else{
+    document.getElementById('loginErr').textContent='Incorrect password';
+    document.getElementById('loginPw').classList.add('shake');
+    setTimeout(()=>document.getElementById('loginPw').classList.remove('shake'),400);
+  }
 }
 
-async function loadDrafts() {
-  const { data, error } = await sb
-    .from('content_drafts')
-    .select('*')
-    .order('created_at', { ascending: false });
+function showApp(){
+  document.getElementById('loginScreen').style.display='none';
+  const app=document.getElementById('appContainer');
+  app.style.display='flex';
+  refreshAll();
+  setInterval(()=>{if(!isEditing)refreshAll()},60000);
+}
 
-  if (error) {
-    console.error('Failed to load drafts:', error);
-    document.getElementById('draftsList').innerHTML = '<div class="empty">Failed to load drafts.</div>';
+if(sessionStorage.getItem('gf_admin')==='1'){
+  document.addEventListener('DOMContentLoaded',showApp);
+}
+
+/* ═══ DATA LOADING ═══ */
+async function refreshAll(){
+  await Promise.all([loadDrafts(),loadTweets(),loadSyncLogs(),loadTopics()]);
+  renderHeader();
+  renderSidebar();
+  if(selectedId)renderMainForSelected();
+}
+
+async function loadDrafts(){
+  const{data}=await sb.from('content_drafts').select('*').order('created_at',{ascending:false});
+  drafts=data||[];
+}
+async function loadTweets(){
+  const{data}=await sb.from('tweets').select('*').order('created_at',{ascending:false});
+  tweets=data||[];
+}
+async function loadSyncLogs(){
+  const{data}=await sb.from('sync_log').select('*').order('created_at',{ascending:false}).limit(50);
+  syncLogs=data||[];
+}
+async function loadTopics(){
+  const{data}=await sb.from('content_topics').select('*').eq('status','pending').order('priority',{ascending:true}).limit(20);
+  topics=data||[];
+}
+
+/* ═══ HEADER ═══ */
+function renderHeader(){
+  const now=new Date();
+  const dayStr=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const nextRace=getNextRaceInfo();
+  document.getElementById('hdrCenter').textContent=`${dayStr}${nextRace}`;
+
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);
+  const pendingDrafts=drafts.filter(d=>d.review_status==='pending').length;
+  const approvedToday=drafts.filter(d=>d.review_status==='approved'&&new Date(d.reviewed_at)>=todayStart).length;
+  const rejectedToday=drafts.filter(d=>d.review_status==='rejected'&&new Date(d.reviewed_at)>=todayStart).length;
+  const pendingTweets=tweets.filter(t=>t.status==='pending').length;
+
+  document.getElementById('hdrPills').innerHTML=`
+    <span class="hdr-pill pill-gold">${pendingDrafts} Pending</span>
+    <span class="hdr-pill pill-green">${approvedToday} Approved</span>
+    <span class="hdr-pill pill-red">${rejectedToday} Rejected</span>
+    <span class="hdr-pill pill-blue">${pendingTweets} Tweets</span>`;
+
+  document.getElementById('badgeArticles').textContent=pendingDrafts||'';
+  document.getElementById('badgeTweets').textContent=pendingTweets||'';
+}
+
+function getNextRaceInfo(){
+  const races=[
+    {name:'Miami GP',round:4,date:'2026-05-03'},
+    {name:'Canadian GP',round:5,date:'2026-05-24'},
+  ];
+  const now=Date.now();
+  for(const r of races){
+    const d=new Date(r.date).getTime();
+    if(d>now){const days=Math.ceil((d-now)/864e5);return ` \u00b7 Round ${r.round} ${r.name} in ${days} days`;}
+  }
+  return '';
+}
+
+/* ═══ TAB SWITCHING ═══ */
+function switchAdminTab(tab,btn){
+  activeTab=tab;selectedId=null;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderSidebar();
+  renderMainDefault();
+}
+
+/* ═══ SIDEBAR ═══ */
+function renderSidebar(){
+  const el=document.getElementById('sidebarList');
+  if(activeTab==='articles')renderArticleSidebar(el);
+  else if(activeTab==='tweets')renderTweetSidebar(el);
+  else if(activeTab==='approved')renderApprovedSidebar(el);
+  else if(activeTab==='rejected')renderRejectedSidebar(el);
+  else if(activeTab==='queue'){el.innerHTML='<div style="padding:12px;font-size:11px;color:var(--muted)">See main panel</div>';renderQueuePanel();}
+}
+
+function renderArticleSidebar(el){
+  const pending=drafts.filter(d=>d.review_status==='pending');
+  const sorted=pending.sort((a,b)=>{
+    const pa=priorityOf(a),pb=priorityOf(b);
+    if(pa!==pb)return pb-pa;
+    return new Date(b.created_at)-new Date(a.created_at);
+  });
+  if(!sorted.length){
+    el.innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">All clear \u2014 no pending drafts.<br><br>Next generation runs in ~${nextCronMin('generate-content')} min.</div>`;
     return;
   }
-  allDrafts = data || [];
-  renderDrafts();
+  el.innerHTML=sorted.map(d=>`
+    <div class="sidebar-item ${selectedId===d.id?'active':''}" onclick="selectDraft('${d.id}')">
+      <div class="si-top">
+        <span class="si-priority">${priorityIcon(d)}</span>
+        <span class="si-type">${d.content_type||'draft'}</span>
+        <span class="si-time">${timeAgo(d.created_at)}</span>
+      </div>
+      <div class="si-title">${esc(d.title||'Untitled')}</div>
+      <div class="si-meta"><div class="si-dot dot-pending"></div>${d.generation_model||''}</div>
+    </div>`).join('');
 }
 
-async function loadTweets() {
-  // Load tweets with article info
-  const { data: tweets, error } = await sb
-    .from('tweets')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Failed to load tweets:', error);
-    document.getElementById('tweetsList').innerHTML = '<div class="empty">Failed to load tweets.</div>';
-    return;
-  }
-  allTweets = tweets || [];
-
-  // Load article titles for linked tweets
-  const articleIds = [...new Set(allTweets.filter(t => t.article_id).map(t => t.article_id))];
-  if (articleIds.length) {
-    const { data: articles } = await sb
-      .from('articles')
-      .select('id, title, slug')
-      .in('id', articleIds);
-    articleMap = {};
-    (articles || []).forEach(a => { articleMap[a.id] = a; });
-  }
-
-  renderTweets();
+function renderTweetSidebar(el){
+  const pending=tweets.filter(t=>t.status==='pending');
+  if(!pending.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No pending tweets.</div>';return}
+  el.innerHTML=pending.map(t=>{
+    const len=(t.tweet_text||'').length;
+    return`<div class="sidebar-item ${selectedId===t.id?'active':''}" onclick="selectTweet('${t.id}')">
+      <div class="si-top">
+        <span class="si-type">tweet</span>
+        <span class="si-chars ${len<=270?'chars-ok':'chars-warn'}">${len}/280</span>
+        <span class="si-time">${timeAgo(t.created_at)}</span>
+      </div>
+      <div class="si-title" style="font-family:var(--font);text-transform:none;font-size:12px">${esc((t.tweet_text||'').slice(0,70))}${(t.tweet_text||'').length>70?'...':''}</div>
+      <div class="si-meta"><div class="si-dot dot-pending"></div></div>
+    </div>`}).join('');
 }
 
-/* ═══════ STATS ═══════ */
-function renderStats() {
-  const draftPending = allDrafts.filter(d => d.review_status === 'pending').length;
-  const draftApproved = allDrafts.filter(d => d.review_status === 'approved').length;
-  const draftRejected = allDrafts.filter(d => d.review_status === 'rejected').length;
-  const tweetPending = allTweets.filter(t => t.status === 'pending').length;
-  const tweetApproved = allTweets.filter(t => t.status === 'approved').length;
-  const tweetPosted = allTweets.filter(t => t.status === 'posted').length;
-
-  document.getElementById('draftCountBadge').textContent = draftPending;
-  document.getElementById('tweetCountBadge').textContent = tweetPending;
-
-  document.getElementById('stats').innerHTML = `
-    <div class="stat-box"><div class="stat-num">${allDrafts.length}</div><div class="stat-label">Drafts</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:#92400E;">${draftPending}</div><div class="stat-label">Drafts Pending</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--green);">${draftApproved}</div><div class="stat-label">Drafts Approved</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--blue);">${allTweets.length}</div><div class="stat-label">Tweets</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:#92400E;">${tweetPending}</div><div class="stat-label">Tweets Pending</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--green);">${tweetPosted}</div><div class="stat-label">Tweets Posted</div></div>
-  `;
+function renderApprovedSidebar(el){
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);
+  const appDrafts=drafts.filter(d=>d.review_status==='approved'&&new Date(d.reviewed_at||d.created_at)>=todayStart);
+  const appTweets=tweets.filter(t=>(t.status==='approved'||t.status==='posted')&&new Date(t.created_at)>=todayStart);
+  const all=[
+    ...appDrafts.map(d=>({type:'article',title:d.title,time:d.reviewed_at||d.created_at,slug:d.published_article_id})),
+    ...appTweets.map(t=>({type:'tweet',title:(t.tweet_text||'').slice(0,60),time:t.posted_at||t.created_at})),
+  ].sort((a,b)=>new Date(b.time)-new Date(a.time));
+  if(!all.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Nothing approved today.</div>';return}
+  el.innerHTML=all.map(i=>`<div class="sidebar-item">
+    <div class="history-row" style="border:none;padding:0">
+      <span class="history-icon">${i.type==='article'?'\ud83d\udcc4':'\ud83d\udc26'}</span>
+      <span class="history-title" style="font-size:12px">${esc(i.title||'')}</span>
+      <span class="history-time">${timeAgo(i.time)}</span>
+    </div>
+  </div>`).join('');
+  renderMainDefault();
 }
 
-/* ═══════ DRAFTS ═══════ */
-function renderDrafts() {
-  const el = document.getElementById('draftsList');
-  let drafts = allDrafts;
-  if (currentFilter !== 'all') {
-    drafts = drafts.filter(d => d.review_status === currentFilter);
-  }
+function renderRejectedSidebar(el){
+  const todayStart=new Date();todayStart.setHours(0,0,0,0);
+  const rej=drafts.filter(d=>d.review_status==='rejected'&&new Date(d.reviewed_at||d.created_at)>=todayStart);
+  if(!rej.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Nothing rejected today.</div>';return}
+  el.innerHTML=rej.map(d=>`<div class="sidebar-item">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="flex:1;font-size:12px">${esc(d.title||'Untitled')}</span>
+      <button class="restore-btn" onclick="restoreDraft('${d.id}')">Restore</button>
+    </div>
+  </div>`).join('');
+}
 
-  if (!drafts.length) {
-    el.innerHTML = '<div class="empty">No drafts match this filter.</div>';
-    return;
-  }
+/* ═══ MAIN PANEL ═══ */
+function renderMainDefault(){
+  if(activeTab==='queue'){renderQueuePanel();return}
+  if(activeTab==='approved'){document.getElementById('mainPanel').innerHTML='<div class="panel-empty">Approved items shown in sidebar</div>';return}
+  if(activeTab==='rejected'){document.getElementById('mainPanel').innerHTML='<div class="panel-empty">Rejected items shown in sidebar \u2014 click Restore to move back to pending</div>';return}
+  document.getElementById('mainPanel').innerHTML='<div class="panel-empty">Select an item from the sidebar</div>';
+}
 
-  el.innerHTML = drafts.map(d => {
-    const statusClass = `status-${d.review_status}`;
-    const timeAgo = getTimeAgo(d.created_at);
-    const isPublished = !!d.published_article_id;
+function renderMainForSelected(){
+  if(activeTab==='articles'){const d=drafts.find(x=>x.id===selectedId);if(d)renderArticleEditor(d);}
+  if(activeTab==='tweets'){const t=tweets.find(x=>x.id===selectedId);if(t)renderTweetEditor(t);}
+}
 
-    return `
-      <div class="draft-card" id="draft-${d.id}">
-        <div class="draft-header">
-          <span class="draft-type">${d.content_type || 'draft'}</span>
-          <span class="draft-title">${escapeHtml(d.title || 'Untitled')}</span>
-          <span class="draft-status ${statusClass}">${d.review_status}${isPublished ? ' (published)' : ''}</span>
+/* ═══ ARTICLE EDITOR ═══ */
+function selectDraft(id){selectedId=id;renderSidebar();renderMainForSelected()}
+
+function renderArticleEditor(d){
+  const tags=d.tags||[];
+  const wc=wordCount(d.body||'');
+  const wcClass=wc>=350&&wc<=550?'wc-ok':wc<200||wc>700?'wc-bad':'wc-warn';
+  const main=document.getElementById('mainPanel');
+  main.innerHTML=`
+    <input class="editor-title" id="edTitle" value="${esc(d.title||'')}" onfocus="isEditing=true" onblur="isEditing=false"/>
+    <div class="tag-row" id="edTags">${TAGS.map(t=>`<span class="tag-pill ${tags.includes(t)?'active':''}" onclick="toggleTag(this,'${t}')">${t}</span>`).join('')}</div>
+    <div class="meta-row">Generated ${timeAgo(d.created_at)} \u00b7 ${d.generation_model||'unknown'} \u00b7 ${d.content_type||'draft'}</div>
+    <div class="editor-grid">
+      <div>
+        <textarea class="editor-excerpt" id="edExcerpt" placeholder="Excerpt / lead paragraph..." onfocus="isEditing=true" onblur="isEditing=false">${esc(d.excerpt||'')}</textarea>
+        <textarea class="editor-body" id="edBody" placeholder="Article body..." oninput="updateWc()" onfocus="isEditing=true" onblur="isEditing=false">${esc(d.body||'')}</textarea>
+        <div class="word-count ${wcClass}" id="edWc">${wc} words \u00b7 Target: 400\u2013500</div>
+      </div>
+      <div>
+        <div class="source-box">
+          <div class="source-label">Source Intelligence</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">${esc(d.source_context||'No source context')}</div>
         </div>
-        <div class="draft-body">${escapeHtml(d.body || '')}</div>
-        <div class="draft-meta">
-          <span>${timeAgo}</span>
-          <span>${d.generation_model || ''}</span>
-          ${d.tags?.length ? `<span>${d.tags.join(', ')}</span>` : ''}
-          <div class="draft-actions">
-            <button class="btn btn-edit" onclick="openEdit('${d.id}')">Edit</button>
-            ${d.review_status === 'pending' ? `
-              <button class="btn btn-approve" onclick="setDraftStatus('${d.id}', 'approved')">Approve</button>
-              <button class="btn btn-reject" onclick="setDraftStatus('${d.id}', 'rejected')">Reject</button>
-            ` : d.review_status === 'rejected' ? `
-              <button class="btn btn-approve" onclick="setDraftStatus('${d.id}', 'approved')">Approve</button>
-            ` : ''}
+        <div class="source-box">
+          <div class="source-label">Publish Timing</div>
+          <div class="timing-group" id="edTiming">
+            <label class="timing-opt selected"><input type="radio" name="timing" value="now" checked/> \u26a1 Immediate</label>
+            <label class="timing-opt"><input type="radio" name="timing" value="2h"/> \ud83d\udd50 2 Hours from now</label>
+            <label class="timing-opt"><input type="radio" name="timing" value="tomorrow"/> \ud83c\udf05 Tomorrow 7:00 AM</label>
+            <label class="timing-opt"><input type="radio" name="timing" value="custom"/> \ud83d\udcc5 Custom</label>
+            <input type="datetime-local" id="edCustomTime" style="display:none;margin-top:4px;width:100%"/>
           </div>
         </div>
-      </div>`;
-  }).join('');
-}
-
-async function setDraftStatus(id, status) {
-  const { error } = await sb
-    .from('content_drafts')
-    .update({ review_status: status, reviewed_at: new Date().toISOString(), reviewed_by: 'admin' })
-    .eq('id', id);
-  if (error) { showToast('Error: ' + error.message); return; }
-  showToast(`Draft ${status}`);
-  await loadAll();
-}
-
-function setFilter(filter, btn) {
-  currentFilter = filter;
-  document.querySelectorAll('#filters .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderDrafts();
-}
-
-function openEdit(id) {
-  const draft = allDrafts.find(d => d.id === id);
-  if (!draft) return;
-  document.getElementById('editId').value = id;
-  document.getElementById('editTitle').value = draft.title || '';
-  document.getElementById('editExcerpt').value = draft.excerpt || '';
-  document.getElementById('editBody').value = draft.body || '';
-  document.getElementById('editModal').classList.add('active');
-}
-
-function closeModal() {
-  document.getElementById('editModal').classList.remove('active');
-}
-
-async function saveEdit() {
-  const id = document.getElementById('editId').value;
-  const title = document.getElementById('editTitle').value;
-  const excerpt = document.getElementById('editExcerpt').value;
-  const body = document.getElementById('editBody').value;
-  const { error } = await sb.from('content_drafts').update({ title, excerpt, body }).eq('id', id);
-  if (error) { showToast('Error: ' + error.message); return; }
-  closeModal();
-  showToast('Draft saved');
-  await loadAll();
-}
-
-/* ═══════ TWEETS ═══════ */
-function charCountClass(len) {
-  if (len > 280) return 'tweet-char-over';
-  if (len > 260) return 'tweet-char-warn';
-  return 'tweet-char-ok';
-}
-
-function renderTweets() {
-  const el = document.getElementById('tweetsList');
-  let tweets = allTweets;
-  if (tweetFilter !== 'all') {
-    tweets = tweets.filter(t => t.status === tweetFilter);
-  }
-
-  if (!tweets.length) {
-    el.innerHTML = '<div class="empty">No tweets match this filter.</div>';
-    return;
-  }
-
-  el.innerHTML = tweets.map(t => {
-    const article = articleMap[t.article_id];
-    const len = (t.tweet_text || '').length;
-    const ccClass = charCountClass(len);
-    const timeAgo = getTimeAgo(t.created_at);
-    const isPosted = t.status === 'posted';
-    const isPending = t.status === 'pending';
-    const isApproved = t.status === 'approved';
-    const isFailed = t.status === 'failed';
-
-    return `
-      <div class="tweet-card" id="tweet-${t.id}">
-        <div class="tweet-header">
-          <span class="draft-type">tweet</span>
-          <span class="tweet-article-link">${article ? escapeHtml(article.title) : 'No linked article'}</span>
-          <span class="draft-status status-${t.status}">${isPosted ? '&#10003; posted' : t.status}</span>
+        <div class="actions">
+          <button class="act-btn act-approve" onclick="approveDraft('${d.id}')">\u2713 Approve &amp; Publish</button>
+          <button class="act-btn act-reject" onclick="rejectDraft('${d.id}')">\u2715 Reject</button>
+          <button class="act-btn act-save" onclick="saveDraft('${d.id}')">\u270e Save Edits</button>
+          <button class="act-btn act-regen" onclick="regenDraft()">\u21ba Regenerate</button>
+          <button class="act-btn act-next" onclick="nextDraft()">\u2192 Next Draft</button>
         </div>
-        <div class="tweet-body">
-          <div class="tweet-text" id="tweet-text-${t.id}" onclick="startTweetEdit('${t.id}')">${escapeHtml(t.tweet_text || '')}</div>
-          <textarea class="tweet-text-edit" id="tweet-edit-${t.id}" oninput="updateTweetCharCount('${t.id}')" onblur="saveTweetEdit('${t.id}')" maxlength="300"></textarea>
-          <div class="tweet-char-count ${ccClass}" id="tweet-cc-${t.id}">${len}/280</div>
+        <div class="kb-hints">A=Approve  R=Reject  S=Save  G=Regen  Tab=Next</div>
+      </div>
+    </div>`;
+
+  // Timing radio listeners
+  document.querySelectorAll('#edTiming input[name="timing"]').forEach(r=>{
+    r.addEventListener('change',()=>{
+      document.querySelectorAll('#edTiming .timing-opt').forEach(o=>o.classList.remove('selected'));
+      r.closest('.timing-opt').classList.add('selected');
+      document.getElementById('edCustomTime').style.display=r.value==='custom'?'block':'none';
+    });
+  });
+}
+
+function updateWc(){
+  const body=document.getElementById('edBody')?.value||'';
+  const wc=wordCount(body);
+  const cl=wc>=350&&wc<=550?'wc-ok':wc<200||wc>700?'wc-bad':'wc-warn';
+  const el=document.getElementById('edWc');
+  if(el){el.textContent=`${wc} words \u00b7 Target: 400\u2013500`;el.className='word-count '+cl;}
+}
+
+function getSelectedTags(){
+  return Array.from(document.querySelectorAll('#edTags .tag-pill.active')).map(e=>e.textContent);
+}
+
+function toggleTag(el){el.classList.toggle('active')}
+
+function getPublishTime(){
+  const v=document.querySelector('#edTiming input[name="timing"]:checked')?.value;
+  if(v==='2h'){const d=new Date();d.setHours(d.getHours()+2);return d.toISOString()}
+  if(v==='tomorrow'){const d=new Date();d.setDate(d.getDate()+1);d.setHours(7,0,0,0);return d.toISOString()}
+  if(v==='custom')return document.getElementById('edCustomTime')?.value?new Date(document.getElementById('edCustomTime').value).toISOString():new Date().toISOString();
+  return new Date().toISOString();
+}
+
+function makeSlug(title){
+  return title.toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').slice(0,80)+'-'+Date.now().toString(36);
+}
+
+/* ═══ ARTICLE ACTIONS ═══ */
+async function approveDraft(id){
+  const title=document.getElementById('edTitle')?.value?.trim();
+  const body=document.getElementById('edBody')?.value?.trim();
+  const excerpt=document.getElementById('edExcerpt')?.value?.trim();
+  const tags=getSelectedTags();
+  if(!body){toast('Article body is empty','error');return}
+
+  const publishAt=getPublishTime();
+  const slug=makeSlug(title||'untitled');
+
+  // 1. Insert into articles
+  const{data:article,error:insertErr}=await sb.from('articles').insert({
+    title,slug,body,excerpt,tags,author:'GridFeed Staff',status:'published',published_at:publishAt
+  }).select('id').single();
+
+  if(insertErr){toast('Publish failed: '+insertErr.message,'error');return}
+
+  // 2. Update draft
+  await sb.from('content_drafts').update({
+    review_status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:'admin',
+    published_article_id:article?.id,title,body,excerpt,tags
+  }).eq('id',id);
+
+  toast('\u2713 Published: '+title,'success');
+  setTimeout(()=>{nextDraft()},1500);
+  await refreshAll();
+}
+
+async function rejectDraft(id){
+  await sb.from('content_drafts').update({review_status:'rejected',reviewed_at:new Date().toISOString(),reviewed_by:'admin'}).eq('id',id);
+  toast('Rejected','error');
+  nextDraft();
+  await refreshAll();
+}
+
+async function saveDraft(id){
+  const title=document.getElementById('edTitle')?.value;
+  const body=document.getElementById('edBody')?.value;
+  const excerpt=document.getElementById('edExcerpt')?.value;
+  const tags=getSelectedTags();
+  const{error}=await sb.from('content_drafts').update({title,body,excerpt,tags}).eq('id',id);
+  if(error){toast('Save failed: '+error.message,'error');return}
+  toast('Edits saved','info');
+  await refreshAll();
+}
+
+async function restoreDraft(id){
+  await sb.from('content_drafts').update({review_status:'pending',reviewed_at:null,reviewed_by:null}).eq('id',id);
+  toast('Restored to pending','info');
+  await refreshAll();
+}
+
+async function regenDraft(){
+  toast('Regenerating...','info');
+  try{await fetch('/.netlify/functions/generate-content');toast('Regeneration triggered','success')}
+  catch(e){toast('Regen failed','error')}
+  setTimeout(()=>refreshAll(),5000);
+}
+
+function nextDraft(){
+  const pending=drafts.filter(d=>d.review_status==='pending');
+  const idx=pending.findIndex(d=>d.id===selectedId);
+  const next=pending[idx+1]||pending[0];
+  if(next)selectDraft(next.id);
+  else{selectedId=null;renderSidebar();renderMainDefault()}
+}
+
+/* ═══ TWEET EDITOR ═══ */
+function selectTweet(id){selectedId=id;renderSidebar();renderMainForSelected()}
+
+function renderTweetEditor(t){
+  const len=(t.tweet_text||'').length;
+  const pct=Math.min(len/280*100,100);
+  const ccClass=len<=260?'ok':len<=280?'warn':'over';
+  const barColor=len<=260?'var(--green)':len<=280?'var(--gold)':'var(--red)';
+  const main=document.getElementById('mainPanel');
+  main.innerHTML=`
+    <h3 style="font-family:var(--head);font-size:20px;margin-bottom:16px">Edit Tweet</h3>
+    <div class="editor-grid">
+      <div>
+        <textarea class="tweet-textarea" id="twText" oninput="updateTweetCount()" onfocus="isEditing=true" onblur="isEditing=false">${esc(t.tweet_text||'')}</textarea>
+        <div class="tweet-counter ${ccClass}" id="twCounter">${len}</div>
+        <div class="char-bar"><div class="char-bar-fill" id="twBar" style="width:${pct}%;background:${barColor}"></div></div>
+        <div class="tweet-preview">
+          <div class="tweet-preview-header"><strong>GridFeed F1</strong> @GridFeedF1 \u00b7 just now</div>
+          <div class="tweet-preview-text" id="twPreview">${esc(t.tweet_text||'')}</div>
+          <div class="tweet-preview-link">gridfeed.co</div>
         </div>
-        <div class="tweet-meta">
-          <span>${timeAgo}</span>
-          ${isPosted && t.posted_at ? `<span class="tweet-posted-check">&#10003; Posted ${getTimeAgo(t.posted_at)}</span>` : ''}
-          <div class="draft-actions">
-            ${isPending ? `
-              <button class="btn btn-approve" onclick="setTweetStatus('${t.id}', 'approved')">Approve</button>
-              <button class="btn btn-reject" onclick="setTweetStatus('${t.id}', 'failed')">Reject</button>
-            ` : isApproved ? `
-              <span style="font-size:11px;color:var(--green);font-weight:600;">Queued for posting</span>
-              <button class="btn btn-reject" onclick="setTweetStatus('${t.id}', 'failed')">Cancel</button>
-            ` : isFailed ? `
-              <button class="btn btn-approve" onclick="setTweetStatus('${t.id}', 'approved')">Retry</button>
-            ` : ''}
+      </div>
+      <div>
+        <div class="source-box">
+          <div class="source-label">Tweet Info</div>
+          <div style="font-size:12px;color:var(--dim)">Created ${timeAgo(t.created_at)}</div>
+          <div style="font-size:12px;color:var(--dim);margin-top:4px">Daily count: ${tweets.filter(x=>x.status==='posted'&&isToday(x.posted_at)).length}/4 today</div>
+        </div>
+        <div class="source-box">
+          <div class="source-label">Post Timing</div>
+          <div class="timing-group" id="twTiming">
+            <label class="timing-opt selected"><input type="radio" name="twtiming" value="next" checked/> \u26a1 Next window</label>
+            <label class="timing-opt"><input type="radio" name="twtiming" value="2h"/> \ud83d\udd50 2 Hours</label>
+            <label class="timing-opt"><input type="radio" name="twtiming" value="tomorrow"/> \ud83c\udf05 Tomorrow 9 AM</label>
           </div>
         </div>
-      </div>`;
-  }).join('');
+        <div class="actions">
+          <button class="act-btn act-approve" onclick="approveTweet('${t.id}')">\u2713 Approve</button>
+          <button class="act-btn act-reject" onclick="rejectTweet('${t.id}')">\u2715 Reject</button>
+          <button class="act-btn act-save" onclick="saveTweetEdit('${t.id}')">\u270e Save Edit</button>
+        </div>
+        <div class="kb-hints">A=Approve  R=Reject  S=Save</div>
+      </div>
+    </div>`;
 }
 
-function startTweetEdit(id) {
-  const tweet = allTweets.find(t => t.id === id);
-  if (!tweet || tweet.status === 'posted') return;
-  const textEl = document.getElementById(`tweet-text-${id}`);
-  const editEl = document.getElementById(`tweet-edit-${id}`);
-  textEl.style.display = 'none';
-  editEl.style.display = 'block';
-  editEl.value = tweet.tweet_text || '';
-  editEl.focus();
-  updateTweetCharCount(id);
+function updateTweetCount(){
+  const text=document.getElementById('twText')?.value||'';
+  const len=text.length;
+  const pct=Math.min(len/280*100,100);
+  const ccClass=len<=260?'ok':len<=280?'warn':'over';
+  const barColor=len<=260?'var(--green)':len<=280?'var(--gold)':'var(--red)';
+  document.getElementById('twCounter').textContent=len;
+  document.getElementById('twCounter').className='tweet-counter '+ccClass;
+  document.getElementById('twBar').style.width=pct+'%';
+  document.getElementById('twBar').style.background=barColor;
+  document.getElementById('twPreview').textContent=text;
 }
 
-function updateTweetCharCount(id) {
-  const editEl = document.getElementById(`tweet-edit-${id}`);
-  const ccEl = document.getElementById(`tweet-cc-${id}`);
-  const len = editEl.value.length;
-  ccEl.textContent = `${len}/280`;
-  ccEl.className = `tweet-char-count ${charCountClass(len)}`;
+async function approveTweet(id){
+  const text=document.getElementById('twText')?.value?.trim();
+  if(text){await sb.from('tweets').update({tweet_text:text}).eq('id',id)}
+  await sb.from('tweets').update({status:'approved'}).eq('id',id);
+  toast('\u2713 Tweet approved \u2014 posts next run','success');
+  selectedId=null;await refreshAll();
 }
 
-async function saveTweetEdit(id) {
-  const editEl = document.getElementById(`tweet-edit-${id}`);
-  const textEl = document.getElementById(`tweet-text-${id}`);
-  const newText = editEl.value.trim();
-
-  editEl.style.display = 'none';
-  textEl.style.display = 'block';
-
-  const tweet = allTweets.find(t => t.id === id);
-  if (!tweet || newText === tweet.tweet_text) return;
-
-  const { error } = await sb.from('tweets').update({ tweet_text: newText }).eq('id', id);
-  if (error) { showToast('Error saving tweet: ' + error.message); return; }
-
-  tweet.tweet_text = newText;
-  textEl.textContent = newText;
-  const len = newText.length;
-  const ccEl = document.getElementById(`tweet-cc-${id}`);
-  ccEl.textContent = `${len}/280`;
-  ccEl.className = `tweet-char-count ${charCountClass(len)}`;
-  showToast('Tweet saved');
+async function rejectTweet(id){
+  await sb.from('tweets').update({status:'failed'}).eq('id',id);
+  toast('Tweet rejected','error');
+  selectedId=null;await refreshAll();
 }
 
-async function setTweetStatus(id, status) {
-  const { error } = await sb.from('tweets').update({ status }).eq('id', id);
-  if (error) { showToast('Error: ' + error.message); return; }
-  showToast(`Tweet ${status === 'approved' ? 'approved — will post next run' : status}`);
-  await loadAll();
+async function saveTweetEdit(id){
+  const text=document.getElementById('twText')?.value;
+  const{error}=await sb.from('tweets').update({tweet_text:text}).eq('id',id);
+  if(error){toast('Save failed','error');return}
+  toast('Tweet saved','info');await refreshAll();
 }
 
-function setTweetFilter(filter, btn) {
-  tweetFilter = filter;
-  document.querySelectorAll('#tweetFilters .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTweets();
+/* ═══ QUEUE PANEL ═══ */
+function renderQueuePanel(){
+  const main=document.getElementById('mainPanel');
+  const logMap={};
+  syncLogs.forEach(l=>{if(!logMap[l.function_name])logMap[l.function_name]=l});
+
+  main.innerHTML=`
+    <h3 style="font-family:var(--head);font-size:20px;margin-bottom:16px">Content Pipeline</h3>
+    <table class="queue-table">
+      <thead><tr><th>Function</th><th>Last Run</th><th>Result</th><th>Message</th><th></th></tr></thead>
+      <tbody>${CRONS.map(c=>{
+        const log=logMap[c.name];
+        const ago=log?timeAgo(log.created_at):'Never';
+        const status=log?.status||'—';
+        const msg=(log?.message||'').slice(0,60);
+        return`<tr>
+          <td style="font-weight:600">${c.label}</td>
+          <td style="color:var(--dim)">${ago}</td>
+          <td><span class="queue-status ${status==='success'?'qs-success':'qs-error'}">${status}</span></td>
+          <td style="color:var(--dim);font-size:11px">${esc(msg)}</td>
+          <td><button class="run-btn" onclick="runFunction('${c.name}',this)">\u25b6 Run</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+    ${topics.length?`
+      <h3 style="font-family:var(--head);font-size:18px;margin:24px 0 12px">${topics.length} Topics Queued</h3>
+      ${topics.map(t=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--dim)">
+        <span style="font-weight:700;color:var(--text)">${esc(t.content_type||'topic')}</span> \u2014 ${esc(t.topic||'')}
+        <span style="color:var(--muted);margin-left:8px">${timeAgo(t.created_at)}</span>
+      </div>`).join('')}
+    `:''}`;
 }
 
-/* ═══════ UTILS ═══════ */
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
+async function runFunction(name,btn){
+  btn.textContent='\u23f3';btn.disabled=true;
+  try{
+    const res=await fetch(`/.netlify/functions/${name}`);
+    const json=await res.json();
+    toast(`${name}: ${json.ok?'Success':'Error'}`,'success');
+  }catch(e){toast(`${name} failed`,'error')}
+  btn.textContent='\u25b6 Run';btn.disabled=false;
+  setTimeout(()=>refreshAll(),2000);
 }
 
-function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function getTimeAgo(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(diff / 3600000);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(diff / 86400000)}d ago`;
-}
-
-// Close modal on overlay click
-document.getElementById('editModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
+/* ═══ KEYBOARD ═══ */
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(!selectedId)return;
+  if(e.key==='a'||e.key==='A'){
+    e.preventDefault();
+    if(activeTab==='articles')document.querySelector('.act-approve')?.click();
+    if(activeTab==='tweets')document.querySelector('.act-approve')?.click();
+  }
+  if(e.key==='r'||e.key==='R'){e.preventDefault();document.querySelector('.act-reject')?.click()}
+  if(e.key==='s'||e.key==='S'){e.preventDefault();document.querySelector('.act-save')?.click()}
+  if(e.key==='g'||e.key==='G'){e.preventDefault();document.querySelector('.act-regen')?.click()}
+  if(e.key==='Tab'&&activeTab==='articles'){e.preventDefault();nextDraft()}
 });
 
-// ═══════ AUTH GATE ═══════
-async function checkAuth() {
-  const token = sessionStorage.getItem('gf_admin_token');
-  if (!token) { window.location.href = '/admin-login'; return false; }
+/* ═══ UTILS ═══ */
+function timeAgo(d){if(!d)return'—';const ms=Date.now()-new Date(d).getTime(),m=Math.floor(ms/6e4),h=Math.floor(ms/36e5),dy=Math.floor(ms/864e5);return m<1?'just now':m<60?m+'m ago':h<24?h+'h ago':dy+'d ago'}
+function wordCount(s){return s?s.trim().split(/\s+/).filter(Boolean).length:0}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function isToday(d){if(!d)return false;const t=new Date(),x=new Date(d);return t.toDateString()===x.toDateString()}
+function priorityOf(d){const t=(d.tags||[]).join(' ')+(d.content_type||'');if(t.includes('BREAKING')||t.includes('breaking'))return 3;return 1}
+function priorityIcon(d){const p=priorityOf(d);return p>=3?'\ud83d\udd34':'\u26aa'}
 
-  try {
-    const res = await fetch('/.netlify/functions/auth-admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-    const data = await res.json();
-    if (!data.success) {
-      sessionStorage.removeItem('gf_admin_token');
-      window.location.href = '/admin-login';
-      return false;
-    }
-    return true;
-  } catch {
-    window.location.href = '/admin-login';
-    return false;
-  }
+function nextCronMin(name){
+  const c=CRONS.find(x=>x.name===name);if(!c)return'?';
+  const parts=c.cron.split(' ');
+  if(parts[0].startsWith('*/')){return parts[0].replace('*/','');}
+  return'60';
 }
 
-checkAuth().then(ok => { if (ok) loadAll(); });
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.className='toast toast-'+type;
+  el.textContent=msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
 </script>
 </body>
 </html>
