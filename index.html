@@ -45,7 +45,6 @@ img{display:block;max-width:100%}
 .live-badge.vis{display:flex}
 .live-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.btn-sub{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--header);background:var(--gold);padding:5px 12px;border-radius:var(--radius)}
 
 /* ═══ TOP NAV (desktop) ═══ */
 .top-nav{background:var(--header);border-bottom:1px solid rgba(255,255,255,.08)}
@@ -66,7 +65,6 @@ img{display:block;max-width:100%}
 @media(max-width:768px){
   .bot-nav{display:block}
   .top-nav{display:none}
-  .btn-sub{display:none}
   body{padding-bottom:calc(var(--bottom-nav) + env(safe-area-inset-bottom,0))}
 }
 
@@ -190,14 +188,14 @@ body.mo{overflow:hidden}
 .sb-sprint{background:#FEF3C7;color:#92400E}
 .sch-note{font-size:10px;color:var(--muted);font-style:italic;margin-left:4px}
 
-/* ═══ NEWSLETTER ═══ */
-.nl{background:var(--header);border-radius:var(--radius);padding:20px;margin-top:20px}
-.nl h3{font-family:var(--head);font-size:20px;font-weight:700;color:#fff;text-transform:uppercase}
-.nl p{font-size:12px;color:var(--muted);margin-top:4px}
-.nl-form{display:flex;gap:8px;margin-top:12px}
-.nl-in{flex:1;padding:10px 12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);border-radius:var(--radius);color:#fff;font-size:13px}
-.nl-in::placeholder{color:var(--muted)}
-.nl-btn{background:var(--accent);color:#fff;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px 16px;border-radius:var(--radius)}
+/* ═══ INSTALL CTA ═══ */
+.install-cta{background:var(--header);border-radius:var(--radius);padding:20px;margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.install-cta h3{font-family:var(--head);font-size:20px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px}
+.install-cta p{font-size:13px;color:rgba(255,255,255,.5);margin-top:4px}
+.install-cta-btn{background:var(--accent);color:#fff;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 20px;border-radius:var(--radius);white-space:nowrap}
+.notif-btn{display:none;background:transparent;border:1px solid rgba(255,255,255,.2);border-radius:var(--radius);padding:5px 10px;color:rgba(255,255,255,.7);font-size:14px;cursor:pointer}
+.notif-btn.subscribed{border-color:var(--accent);color:var(--accent)}
+@media(max-width:768px){.notif-btn{display:flex;align-items:center}}
 
 /* ═══ INSTALL BANNER ═══ */
 .install-banner{display:none;position:fixed;bottom:calc(var(--bottom-nav) + 8px);left:12px;right:12px;background:var(--header);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:14px 16px;z-index:150;color:#fff;font-size:13px}
@@ -224,7 +222,7 @@ body.mo{overflow:hidden}
   <a href="/" onclick="go('home');return false"><img src="/logo.png" alt="GridFeed" class="hdr-logo"/></a>
   <div class="hdr-right">
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div>LIVE</div>
-    <button class="btn-sub" onclick="go('home');document.getElementById('nlEmail')?.focus()">Subscribe</button>
+    <button class="notif-btn" id="notifBtn" onclick="regPush()">🔔</button>
   </div>
 </div></header>
 
@@ -260,10 +258,9 @@ body.mo{overflow:hidden}
       <div class="card" id="homeMini"><div class="card-body"><div class="skel-row"><div class="skel"></div><div class="skel" style="width:80%"></div></div></div></div>
     </div>
   </div>
-  <div class="nl">
-    <h3>The GridFeed Brief</h3>
-    <p>Race previews, picks, and analysis every Thursday. Free.</p>
-    <div class="nl-form"><input class="nl-in" type="email" placeholder="your@email.com" id="nlEmail"/><button class="nl-btn" id="nlBtn" onclick="handleNL()">Subscribe</button></div>
+  <div class="install-cta" id="installCta" style="display:none">
+    <div><h3>Get the GridFeed App</h3><p>Live timing, picks and news. Free. Add to home screen.</p></div>
+    <button class="install-cta-btn" id="ctaInstall" onclick="triggerInstall()">Add to Home Screen</button>
   </div>
 </div>
 
@@ -573,12 +570,30 @@ function initSched(){
   }).join('');
 }
 
-/* ═══ NEWSLETTER ═══ */
-function handleNL(){const e=document.getElementById('nlEmail')?.value?.trim(),b=document.getElementById('nlBtn');if(!e||!e.includes('@')){if(b){b.textContent='Enter valid email';setTimeout(()=>{b.textContent='Subscribe'},2000)}return}if(b){b.textContent='Subscribed!';b.style.background='#16A34A'}document.getElementById('nlEmail').value='';setTimeout(()=>{if(b){b.textContent='Subscribe';b.style.background=''}},3000)}
+/* ═══ PUSH NOTIFICATIONS ═══ */
+const VAPID_PK='BGiNH3DDw7QMuFmiB_Qxgn4aEPLl4k5MW9T27MzcUCjv5jxi5wy7Bb74Fdn8J2PX1NzL-0bPC2lk3EngE1k4rII';
+function b64toUint8(b){const p='='.repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));const a=new Uint8Array(r.length);for(let i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
+async function regPush(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  try{
+    const reg=await navigator.serviceWorker.register('/app-sw.js');
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){const p=await Notification.requestPermission();if(p!=='granted')return;
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64toUint8(VAPID_PK)});
+      await fetch('/.netlify/functions/save-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)})}
+    const btn=document.getElementById('notifBtn');if(btn){btn.textContent='\u2705';btn.classList.add('subscribed')}
+  }catch(e){console.warn('[Push]',e)}
+}
+async function checkPush(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  try{const reg=await navigator.serviceWorker.getRegistration('/app-sw.js');if(!reg)return;
+    const sub=await reg.pushManager.getSubscription();if(sub){const btn=document.getElementById('notifBtn');if(btn){btn.textContent='\u2705';btn.classList.add('subscribed')}}}catch(e){}
+}
+function triggerInstall(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')localStorage.setItem('gf_i','1');deferredPrompt=null});document.getElementById('installCta').style.display='none';document.getElementById('installBanner').classList.remove('vis')}}
 
 /* ═══ INSTALL PROMPT ═══ */
 let deferredPrompt;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const v=parseInt(localStorage.getItem('gf_v')||'0')+1;localStorage.setItem('gf_v',v);if(v>=2&&!localStorage.getItem('gf_i'))document.getElementById('installBanner').classList.add('vis')});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const v=parseInt(localStorage.getItem('gf_v')||'0')+1;localStorage.setItem('gf_v',v);if(v>=2&&!localStorage.getItem('gf_i')){document.getElementById('installBanner').classList.add('vis');const cta=document.getElementById('installCta');if(cta)cta.style.display='flex'}});
 document.getElementById('installBtn').onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')localStorage.setItem('gf_i','1');deferredPrompt=null}document.getElementById('installBanner').classList.remove('vis')};
 
 /* ═══ SERVICE WORKER ═══ */
@@ -588,7 +603,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/app-sw.js').
 function initRoute(){const p=new URLSearchParams(location.search);const t=p.get('tab');if(t&&document.getElementById('p-'+t))go(t)}
 
 /* ═══ BOOT ═══ */
-detectNR();initHome();initRoute();
+detectNR();initHome();initRoute();checkPush();
 setInterval(()=>{if(S.tab==='standings')initSt()},18e5);
 </script>
 </body>
