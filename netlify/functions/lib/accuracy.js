@@ -102,15 +102,12 @@ Championship context required in every race article.
 End every article with one forward-looking sentence about Miami or next race.
 Never mention AI, automation, or content generation.`;
 
-export function buildSystemPrompt(outputFormat) {
-  return [
-    NEVER_REFUSE,
-    HALLUCINATION_RULES,
-    SEASON_CONTEXT,
-    DRIVER_TEAM_MAP,
-    VOICE_RULES,
-    outputFormat || 'OUTPUT: Return ONLY valid JSON with no markdown fences:\n{"title":"...","excerpt":"first 150 chars of body","body":"full article text","tags":["RACE"],"content_type":"..."}',
-  ].join('\n\n');
+export function buildSystemPrompt(webSearchInstruction, outputFormat) {
+  const parts = [NEVER_REFUSE];
+  if (webSearchInstruction) parts.push(webSearchInstruction);
+  parts.push(HALLUCINATION_RULES, SEASON_CONTEXT, DRIVER_TEAM_MAP, VOICE_RULES);
+  parts.push(outputFormat || 'OUTPUT: Return ONLY valid JSON with no markdown fences:\n{"title":"...","excerpt":"first 150 chars of body","body":"full article text","tags":["RACE"],"content_type":"..."}');
+  return parts.join('\n\n');
 }
 
 export function validateArticle(article) {
@@ -135,17 +132,8 @@ export function validateArticle(article) {
     return { valid: false, reason: 'Wrong name: Andrea Antonelli (should be Kimi Antonelli)' };
   }
 
-  const pointsMatches = combined.match(/(\d{2,3})\s*points/g) || [];
-  for (const match of pointsMatches) {
-    const num = parseInt(match);
-    if (num > 72 && num < 500) return { valid: false, reason: `Impossible points: ${num} (max 72)` };
-  }
-
-  const roundMatches = combined.match(/round\s*(\d+)/g) || [];
-  for (const match of roundMatches) {
-    const num = parseInt(match.replace(/\D/g, ''));
-    if (num > 3 && num < 20) return { valid: false, reason: `Impossible round: ${num} (only 3 complete)` };
-  }
+  // Points and round checks removed — AI now uses web_search for real data
+  // Structural checks (venues, champion identity, driver names) remain
 
   if (!article.title || article.title.length < 15) return { valid: false, reason: 'Title too short' };
 
