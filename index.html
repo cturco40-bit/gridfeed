@@ -310,7 +310,7 @@ body.mo{overflow:hidden}
       <div style="font-weight:700;color:var(--text);margin-bottom:6px">Track Map</div>
       <div>Live car tracking activates when a session begins</div>
       <div id="mapNextSess" style="margin-top:8px;color:var(--accent);font-weight:600"></div>
-      <button onclick="loadMapDemo()" style="margin-top:16px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">Load Demo — Suzuka</button>
+      <button onclick="loadMapDemo()" style="margin-top:16px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px">Load Demo — Miami 2024</button>
     </div>
   </div>
 </div>
@@ -746,25 +746,10 @@ function showTip(num,cx,cy){
 
 /* ═══ MAP DEMO ═══ */
 function loadMapDemo(){
-  // Synthetic Suzuka circuit coordinates (approximate figure-8 shape)
-  const suzuka=[];const steps=200;
-  for(let i=0;i<steps;i++){
-    const t=i/steps*Math.PI*2;
-    // Suzuka figure-8: two loops connected
-    const scale=500;
-    let x,y;
-    if(t<Math.PI){
-      // Upper loop (esses, degner, hairpin)
-      x=250+180*Math.cos(t*2-Math.PI/2)+50*Math.sin(t*3);
-      y=200+120*Math.sin(t*2-Math.PI/2)+30*Math.cos(t*4);
-    }else{
-      // Lower loop (spoon, 130R, chicane)
-      const t2=t-Math.PI;
-      x=250+200*Math.cos(-t2*2+Math.PI/2)-40*Math.sin(t2*3);
-      y=350+100*Math.sin(-t2*2+Math.PI/2)+20*Math.cos(t2*5);
-    }
-    suzuka.push({x,y,i});
-  }
+  // Real Miami International Autodrome coordinates from OpenF1 2024 data
+  const TRACK=[[187,-2944],[-285,-2729],[-680,-2682],[-1246,-2863],[-1619,-3055],[-2012,-3085],[-2657,-2705],[-2918,-2527],[-3393,-2442],[-3886,-2588],[-4246,-2883],[-4390,-3160],[-4404,-3522],[-4223,-3800],[-3955,-3884],[-3688,-3894],[-3348,-3905],[-3007,-3947],[-2601,-4016],[-1976,-4133],[-1288,-4129],[-789,-4107],[36,-4093],[777,-4096],[1326,-4203],[2053,-4454],[2573,-4614],[3289,-4762],[4161,-4783],[4828,-4707],[5742,-4458],[6549,-4184],[7306,-3914],[7665,-3765],[8382,-3436],[8954,-3149],[9305,-2944],[9541,-2754],[9668,-2543],[9588,-2298],[9466,-2187],[9272,-2018],[9176,-1890],[9120,-1665],[9164,-1488],[9224,-1387],[9352,-1274],[9534,-1212],[9813,-1202],[10203,-1113],[10496,-785],[10563,-491],[10402,-362],[10398,-166],[10455,45],[10553,337],[10472,539],[10336,607],[10151,652],[9776,672],[9395,683],[8974,696],[8432,713],[7883,725],[7267,739],[6630,753],[6101,765],[5559,782],[4806,808],[4021,836],[3407,857],[2797,879],[1995,906],[1362,919],[708,931],[163,941],[-1044,979],[-1569,1032],[-1984,1071],[-2363,1067],[-2609,946],[-2634,806],[-2561,649],[-2356,479]];
+  const circuit=TRACK.map(p=>({x:p[0],y:p[1]}));
+  const steps=circuit.length;
 
   // Place 20 cars around the track at different positions
   const drivers=[
@@ -796,21 +781,21 @@ function loadMapDemo(){
   // Set timing data with positions
   S.td.race=drivers.map((d,i)=>({pos:i+1,driver:d.name,team:d.team,teamColor:d.tc,gap:i===0?'Leader':'+'+((i*1.3)+Math.random()*2).toFixed(1)+'s',driverNum:d.n}));
 
-  // Set bounds and track from synthetic data
-  S.circBounds=calcBounds(suzuka);
+  // Set bounds and track from real Miami data
+  S.circBounds=calcBounds(circuit);
   S.p1Num=drivers[0].n;
 
   // Build track path
-  const trackPts=suzuka.map(p=>{const{sx,sy}=normCoord(p.x,p.y);return sx+','+sy});
-  const trackD='M '+trackPts.join(' L ')+' Z';
+  const trackPts=circuit.map(p=>{const{sx,sy}=normCoord(p.x,p.y);return sx+','+sy});
+  const trackD='M '+trackPts.join(' L ');
   document.getElementById('trackPath')?.setAttribute('d',trackD);
   document.getElementById('trackCentre')?.setAttribute('d',trackD);
 
   // Place cars around the track
   const locs={};
   drivers.forEach((d,i)=>{
-    const idx=Math.floor((i/drivers.length)*suzuka.length);
-    const pt=suzuka[idx];
+    const idx=Math.floor((i/drivers.length)*circuit.length);
+    const pt=circuit[idx];
     locs[d.n]={x:pt.x,y:pt.y,driver_number:d.n,date:new Date().toISOString()};
   });
   S.carLocs=locs;
@@ -819,7 +804,7 @@ function loadMapDemo(){
 
   // Hide offline, render map
   document.getElementById('mapOffline').style.display='none';
-  document.getElementById('mapHeader').textContent='JAPANESE GRAND PRIX — RACE (DEMO)';
+  document.getElementById('mapHeader').textContent='MIAMI GRAND PRIX — RACE (DEMO)';
   renderMap();
 
   // Animate cars moving around the track
@@ -829,13 +814,13 @@ function loadMapDemo(){
     animStep++;
     drivers.forEach((d,i)=>{
       const idx=(Math.floor((i/drivers.length)*steps)+animStep)%steps;
-      const pt=suzuka[idx];
+      const pt=circuit[idx];
       S.prevLocs[d.n]=S.carLocs[d.n]||{x:pt.x,y:pt.y};
       S.carLocs[d.n]={x:pt.x,y:pt.y,driver_number:d.n,date:new Date().toISOString()};
     });
     S.lastPoll=performance.now();
     renderMap();
-    setTimeout(demoAnimate,500);
+    setTimeout(demoAnimate,400);
   }
   demoAnimate();
 }
