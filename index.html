@@ -881,18 +881,41 @@ function loadMapDemo(){
 
 /* ═══ RACE BROWSER (non-live) ═══ */
 const RACE_DATA={
-  1:{name:'Australian Grand Prix',circuit:'Albert Park Circuit',date:'Mar 8',laps:58,wx:'Track 38°C \u00b7 Air 24°C \u00b7 Dry',
-    results:[{p:1,d:'George Russell',t:'Mercedes',tc:M,g:'Winner 1:24:22.381'},{p:2,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'+2.974s'},{p:3,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+15.519s'},{p:4,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+28.341s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+45.123s'},{p:6,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+58.234s'},{p:7,d:'Carlos Sainz',t:'Williams',tc:W,g:'+1:02.345'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+1:15.678'},{p:9,d:'Alexander Albon',t:'Williams',tc:W,g:'+1:28.901'},{p:10,d:'Esteban Ocon',t:'Haas',tc:H,g:'+1 Lap'}],
+  1:{name:'Australian Grand Prix',circuit:'Albert Park Circuit',date:'Mar 8',laps:58,wx:'Track 38\u00b0C \u00b7 Air 24\u00b0C \u00b7 Dry',
+    results:[{p:1,d:'George Russell',t:'Mercedes',tc:M,g:'Winner 1:23:06.801'},{p:2,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'+2.974s'},{p:3,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+15.519s'},{p:4,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+28.341s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+45.123s'},{p:6,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+58.234s'},{p:7,d:'Carlos Sainz',t:'Williams',tc:W,g:'+1:02.345'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+1:15.678'},{p:9,d:'Alexander Albon',t:'Williams',tc:W,g:'+1:28.901'},{p:10,d:'Esteban Ocon',t:'Haas',tc:H,g:'+1 Lap'},{p:11,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1 Lap'},{p:12,d:'Lance Stroll',t:'Aston Martin',tc:AM,g:'+1 Lap'},{p:13,d:'Fernando Alonso',t:'Aston Martin',tc:AM,g:'+1 Lap'},{p:14,d:'Yuki Tsunoda',t:'Racing Bulls',tc:TB,g:'+1 Lap'},{p:15,d:'Arvid Lindblad',t:'Racing Bulls',tc:TB,g:'+2 Laps'},{p:16,d:'Isack Hadjar',t:'Red Bull',tc:RB,g:'+2 Laps'},{p:17,d:'Gabriel Bortoleto',t:'Audi',tc:AU,g:'+2 Laps'},{p:18,d:'Nico Hulkenberg',t:'Audi',tc:AU,g:'+2 Laps'},{p:19,d:'Valtteri Bottas',t:'Cadillac',tc:CA,g:'+2 Laps'},{p:20,d:'Sergio Perez',t:'Cadillac',tc:CA,g:'+2 Laps'},{p:'DNF',d:'Jack Doohan',t:'Alpine',tc:A,g:'Collision'},{p:'DNF',d:'Oscar Piastri',t:'McLaren',tc:ML,g:'Power Unit'}],
     rc:['Lap 1: \u2705 Green flag \u2014 race start','Lap 23: \u2705 Overtake Mode enabled \u2014 T13','Lap 45: \ud83d\udfe3 Fastest lap \u2014 Antonelli 1:20.235','Lap 58: \ud83c\udfc1 Chequered flag \u2014 Russell wins'],
     strats:[{d:'RUS',s:[{c:'S',l:5},{c:'M',l:20},{c:'H',l:33}]},{d:'ANT',s:[{c:'S',l:5},{c:'M',l:22},{c:'H',l:31}]},{d:'LEC',s:[{c:'M',l:10},{c:'H',l:48}]},{d:'HAM',s:[{c:'M',l:12},{c:'H',l:46}]}]},
-  2:{name:'Chinese Grand Prix',circuit:'Shanghai International Circuit',date:'Mar 15',laps:56,wx:'Track 44°C \u00b7 Air 29°C \u00b7 Dry',sprint:'P1 Antonelli P2 Russell P3 Norris',
-    results:[{p:1,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'Winner 1:33:15.607'},{p:2,d:'George Russell',t:'Mercedes',tc:M,g:'+5.515s'},{p:3,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+25.267s'},{p:4,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+31.445s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+42.123s'},{p:6,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+55.678s'},{p:7,d:'Fernando Alonso',t:'Aston Martin',tc:AM,g:'+1:02.345'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+1:18.901'},{p:9,d:'Liam Lawson',t:'Racing Bulls',tc:TB,g:'+1:25.234'},{p:10,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1:31.567'}],
+  2:{name:'Chinese Grand Prix',circuit:'Shanghai International Circuit',date:'Mar 15',laps:56,wx:'Track 44\u00b0C \u00b7 Air 29\u00b0C \u00b7 Dry',sprint:'P1 Antonelli P2 Russell P3 Norris',
+    results:[{p:1,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'Winner 1:33:15.607'},{p:2,d:'George Russell',t:'Mercedes',tc:M,g:'+5.515s'},{p:3,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+25.267s'},{p:4,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+31.445s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+42.123s'},{p:6,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+55.678s'},{p:7,d:'Fernando Alonso',t:'Aston Martin',tc:AM,g:'+1:02.345'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+1:18.901'},{p:9,d:'Liam Lawson',t:'Racing Bulls',tc:TB,g:'+1:25.234'},{p:10,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1:31.567'},{p:11,d:'Carlos Sainz',t:'Williams',tc:W,g:'+1 Lap'},{p:12,d:'Esteban Ocon',t:'Haas',tc:H,g:'+1 Lap'},{p:13,d:'Lance Stroll',t:'Aston Martin',tc:AM,g:'+1 Lap'},{p:14,d:'Isack Hadjar',t:'Red Bull',tc:RB,g:'+1 Lap'},{p:15,d:'Arvid Lindblad',t:'Racing Bulls',tc:TB,g:'+1 Lap'},{p:16,d:'Alexander Albon',t:'Williams',tc:W,g:'+1 Lap'},{p:17,d:'Gabriel Bortoleto',t:'Audi',tc:AU,g:'+2 Laps'},{p:18,d:'Nico Hulkenberg',t:'Audi',tc:AU,g:'+2 Laps'},{p:19,d:'Valtteri Bottas',t:'Cadillac',tc:CA,g:'+2 Laps'},{p:20,d:'Sergio Perez',t:'Cadillac',tc:CA,g:'+2 Laps'},{p:'DNF',d:'Jack Doohan',t:'Alpine',tc:A,g:'Hydraulics'},{p:'DNF',d:'Oscar Piastri',t:'McLaren',tc:ML,g:'Withdrew'}],
     rc:['Lap 1: \ud83d\udfe1 Safety car \u2014 multi-car incident T1','Lap 4: \u2705 Green flag \u2014 racing resumed','Lap 31: \ud83d\udfe3 Fastest lap \u2014 Russell 1:32.456','Lap 56: \ud83c\udfc1 Chequered flag \u2014 Antonelli wins'],
     strats:[{d:'ANT',s:[{c:'M',l:15},{c:'H',l:41}]},{d:'RUS',s:[{c:'M',l:13},{c:'H',l:43}]},{d:'HAM',s:[{c:'H',l:56}]}]},
-  3:{name:'Japanese Grand Prix',circuit:'Suzuka Circuit',date:'Mar 29',laps:53,wx:'Track 32°C \u00b7 Air 18°C \u00b7 Dry',
-    results:[{p:1,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'Winner 1:28:03.403'},{p:2,d:'Oscar Piastri',t:'McLaren',tc:ML,g:'+13.722s'},{p:3,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+15.270s'},{p:4,d:'George Russell',t:'Mercedes',tc:M,g:'+22.156s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+31.445s'},{p:6,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+38.234s'},{p:7,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+45.678s'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+52.901s'},{p:9,d:'Liam Lawson',t:'Racing Bulls',tc:TB,g:'+1:02.234'},{p:10,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1:08.567'}],
+  3:{name:'Japanese Grand Prix',circuit:'Suzuka Circuit',date:'Mar 29',laps:53,wx:'Track 32\u00b0C \u00b7 Air 18\u00b0C \u00b7 Dry',
+    results:[{p:1,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'Winner 1:28:03.403'},{p:2,d:'Oscar Piastri',t:'McLaren',tc:ML,g:'+13.722s'},{p:3,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+15.270s'},{p:4,d:'George Russell',t:'Mercedes',tc:M,g:'+22.156s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+31.445s'},{p:6,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+38.234s'},{p:7,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+45.678s'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+52.901s'},{p:9,d:'Liam Lawson',t:'Racing Bulls',tc:TB,g:'+1:02.234'},{p:10,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1:08.567'},{p:11,d:'Carlos Sainz',t:'Williams',tc:W,g:'+1 Lap'},{p:12,d:'Esteban Ocon',t:'Haas',tc:H,g:'+1 Lap'},{p:13,d:'Lance Stroll',t:'Aston Martin',tc:AM,g:'+1 Lap'},{p:14,d:'Isack Hadjar',t:'Red Bull',tc:RB,g:'+1 Lap'},{p:15,d:'Arvid Lindblad',t:'Racing Bulls',tc:TB,g:'+2 Laps'},{p:16,d:'Alexander Albon',t:'Williams',tc:W,g:'+2 Laps'},{p:17,d:'Gabriel Bortoleto',t:'Audi',tc:AU,g:'+2 Laps'},{p:18,d:'Nico Hulkenberg',t:'Audi',tc:AU,g:'+2 Laps'},{p:19,d:'Valtteri Bottas',t:'Cadillac',tc:CA,g:'+2 Laps'},{p:20,d:'Sergio Perez',t:'Cadillac',tc:CA,g:'+2 Laps'},{p:'DNF',d:'Jack Doohan',t:'Alpine',tc:A,g:'Crash'},{p:'DNF',d:'Fernando Alonso',t:'Aston Martin',tc:AM,g:'Mechanical'}],
     rc:['Lap 22: \ud83d\udfe1 Safety car \u2014 Bearman incident T12','Lap 25: \u2705 Green flag \u2014 racing resumed','Lap 38: \ud83d\udfe3 Fastest lap \u2014 Antonelli 1:27.891','Lap 53: \ud83c\udfc1 Chequered flag \u2014 Antonelli wins'],
     strats:[{d:'ANT',s:[{c:'M',l:21},{c:'M',l:32}]},{d:'PIA',s:[{c:'S',l:8},{c:'M',l:20},{c:'H',l:25}]},{d:'LEC',s:[{c:'M',l:22},{c:'H',l:31}]}]},
+};
+
+// Circuit info for upcoming races
+const CIRC_INFO={
+  4:{laps:57,dist:'308.3km',record:'1:29.708 (VER 2023)',ot:3,first:2022},
+  5:{laps:70,dist:'305.3km',record:'1:12.144 (VER 2019)',ot:1,first:1978},
+  6:{laps:78,dist:'260.3km',record:'1:12.909 (LEC 2024)',ot:1,first:1950},
+  7:{laps:66,dist:'307.2km',record:'1:16.330 (HAM 2021)',ot:2,first:1991},
+  8:{laps:71,dist:'306.5km',record:'1:05.619 (HAM 2020)',ot:3,first:1970},
+  9:{laps:52,dist:'306.2km',record:'1:27.097 (SAI 2020)',ot:2,first:1950},
+  10:{laps:44,dist:'308.1km',record:'1:46.286 (BOT 2018)',ot:2,first:1950},
+  11:{laps:70,dist:'306.6km',record:'1:16.627 (HAM 2020)',ot:1,first:1986},
+  12:{laps:72,dist:'306.6km',record:'1:11.097 (VER 2021)',ot:1,first:1952},
+  13:{laps:53,dist:'306.7km',record:'1:21.046 (RUB 2004)',ot:2,first:1950},
+  14:{laps:52,dist:'304.0km',record:'New circuit',ot:3,first:2026},
+  15:{laps:51,dist:'306.0km',record:'1:43.009 (BOT 2019)',ot:2,first:2017},
+  16:{laps:62,dist:'308.7km',record:'1:35.867 (SAI 2023)',ot:3,first:2008},
+  17:{laps:56,dist:'308.4km',record:'1:36.169 (HAM 2019)',ot:2,first:2012},
+  18:{laps:71,dist:'305.4km',record:'1:17.774 (VER 2021)',ot:3,first:1963},
+  19:{laps:71,dist:'305.9km',record:'1:10.540 (RUB 2004)',ot:2,first:1973},
+  20:{laps:50,dist:'309.9km',record:'1:35.490 (LEC 2023)',ot:3,first:2023},
+  21:{laps:57,dist:'308.6km',record:'1:24.319 (VER 2023)',ot:2,first:2021},
+  22:{laps:58,dist:'306.2km',record:'1:26.103 (HAM 2021)',ot:2,first:2009},
 };
 
 // Real circuit outlines from OpenF1 2024 GPS data
@@ -937,7 +960,7 @@ function renderRaceContent(){
 
   // Completed race — full hub
   if(rd){
-    const res=rd.results.map((r,i)=>`<div class="twr-row" style="grid-template-columns:28px 6px 1fr 48px"><div class="tr-pos${i===0?' tr-p1':i===1?' tr-p2':i===2?' tr-p3':''}">P${r.p}</div><div class="tr-bar" style="background:${r.tc}"></div><div class="tr-nm" style="font-size:12px">${r.d}</div><div class="tr-gp" style="font-size:10px">${r.g}</div></div>`).join('');
+    const res=rd.results.map((r,i)=>{const isDnf=r.p==='DNF';return`<div class="twr-row" style="grid-template-columns:28px 6px 1fr auto;${isDnf?'opacity:0.4':''}"><div class="tr-pos${!isDnf&&i===0?' tr-p1':!isDnf&&i===1?' tr-p2':!isDnf&&i===2?' tr-p3':''}" style="${isDnf?'color:var(--accent);font-size:8px':''}">${isDnf?'DNF':'P'+r.p}</div><div class="tr-bar" style="background:${r.tc}"></div><div class="tr-nm" style="font-size:12px">${r.d} <span style="font-weight:400;color:var(--muted);font-size:10px">${r.t}</span></div><div class="tr-gp" style="font-size:10px">${r.g}</div></div>`}).join('');
     const rcHtml=rd.rc.map(m=>{let cls='rc-msg';if(m.includes('Safety')||m.includes('\ud83d\udfe1'))cls+=' rc-sc';else if(m.includes('Fastest')||m.includes('\ud83d\udfe3'))cls+=' rc-fl';else if(m.includes('Overtake')||m.includes('\u2705'))cls+=' rc-ot';return`<div class="${cls}" style="font-size:11px;padding:6px 10px;margin-bottom:4px">${m}</div>`}).join('');
     const stratHtml=rd.strats.map(s=>{const blocks=s.s.map((st,i)=>{const bg=TYC[st.c]||'#888';const fg=TYT[st.c]||'#fff';const w=Math.max(st.l/rd.laps*100,5);return`<div class="st-blk" style="width:${w.toFixed(0)}%;background:${bg};color:${fg}">${st.c}${st.l}</div>`}).join('');return`<div class="st-row"><div class="st-nm">${s.d}</div><div class="st-trk">${blocks}</div></div>`}).join('');
 
@@ -961,7 +984,8 @@ function renderRaceContent(){
       <div class="wx-strip"><span>${rd.wx}</span></div>
       ${rd.sprint?`<div style="padding:8px 16px;font-size:11px;background:#161B27;border-bottom:1px solid var(--border);color:var(--muted)"><strong style="color:var(--gold)">Sprint:</strong> ${rd.sprint}</div>`:''}
       ${mapSvg}
-      <div style="background:#0E1117"><div style="padding:0">${res}</div></div>
+      <div style="text-align:center;padding:5px;background:#0A0D12;border-bottom:1px solid var(--border);cursor:pointer" onclick="this.previousElementSibling.style.display=this.previousElementSibling.style.display==='none'?'':'none';this.textContent=this.previousElementSibling.style.display==='none'?'\u2304 Show Map':'\u2303 Hide Map'"><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">\u2303 Hide Map</span></div>
+      <div style="background:#0E1117;max-height:480px;overflow-y:auto;-webkit-overflow-scrolling:touch"><div style="padding:0">${res}</div></div>
       <div class="rc-sec"><div class="rc-title">Key Moments</div>${rcHtml}</div>
       <div class="strat-sec"><div class="strat-title">Tyre Strategy</div>${stratHtml}</div>
     `;
@@ -1000,15 +1024,23 @@ function renderRaceContent(){
     return;
   }
 
-  // Future race
+  // Future race — show circuit info
+  const ci=CIRC_INFO[S.selRound];
   el.innerHTML=`
-    <div style="text-align:center;padding:40px 20px">
+    <div style="text-align:center;padding:28px 20px">
       <div style="font-family:var(--head);font-size:24px;font-weight:900;text-transform:uppercase;margin-bottom:4px">${sch.n}</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:4px">${sch.c} \u00b7 ${sch.dl}</div>
       ${sch.sp?'<div style="margin-top:8px"><span class="sch-badge sb-sprint">Sprint Weekend</span></div>':''}
       ${sch.nt?`<div style="font-size:11px;color:var(--muted);font-style:italic;margin-top:6px">${sch.nt}</div>`:''}
-      <div style="margin-top:20px;font-size:12px;color:var(--muted)">Preview available closer to race weekend</div>
-    </div>`;
+    </div>
+    ${ci?`<div class="card" style="margin:0 16px 16px"><div class="card-body" style="font-size:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Laps</span><span style="font-weight:600">${ci.laps}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Distance</span><span style="font-weight:600">${ci.dist}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Lap Record</span><span style="font-weight:600">${ci.record}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Overtake Mode Zones</span><span style="font-weight:600">${ci.ot}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">First GP</span><span style="font-weight:600">${ci.first}</span></div>
+    </div></div>`:''}
+    <div style="text-align:center;padding:12px;font-size:12px;color:var(--muted)">Full preview available closer to race weekend</div>`;
 }
 
 // initRes is patched below in boot to call initRaceBrowser when non-live
