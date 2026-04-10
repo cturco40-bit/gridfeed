@@ -246,6 +246,7 @@ input:focus,textarea:focus{border-color:var(--accent)}
   <div class="login-box">
     <div class="login-logo"><span class="g">GRID</span><span class="f">FEED</span></div>
     <form onsubmit="event.preventDefault();doLogin();" autocomplete="off">
+    <input type="text" name="username" value="admin" autocomplete="username" style="position:absolute;opacity:0;height:0;width:0;pointer-events:none" tabindex="-1" aria-hidden="true"/>
     <input type="password" class="login-input" id="loginPw" placeholder="Password" autocomplete="current-password"/>
     <button type="submit" class="login-btn">Access Drafts</button>
     </form>
