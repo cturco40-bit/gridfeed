@@ -249,6 +249,16 @@ body.mo{overflow:hidden}
 .dc-r{display:flex;justify-content:space-between;gap:8px;margin-top:3px}.dc-l{font-size:10px;color:var(--muted)}.dc-v{font-size:10px;font-weight:700}
 .dc-tyre{margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}.dc-tl{font-size:9px;color:var(--muted);margin-bottom:3px}.dc-tb{background:var(--border);border-radius:2px;height:4px}.dc-tf{height:4px;border-radius:2px}
 
+/* ═══ RACE PILLS ═══ */
+.race-pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:12px 16px;background:#161B27;border-bottom:1px solid var(--border)}
+.race-pills::-webkit-scrollbar{display:none}
+.rp{padding:7px 12px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid var(--border);color:var(--muted);background:transparent;min-height:34px;display:flex;align-items:center;gap:5px;transition:all .15s;flex-shrink:0}
+.rp.done{color:rgba(255,255,255,.5)}.rp.done::before{content:'';width:5px;height:5px;border-radius:50%;background:#22C55E;flex-shrink:0}
+.rp.can{opacity:.35;text-decoration:line-through;pointer-events:none}
+.rp.next{border-color:var(--accent);color:var(--accent)}
+.rp.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.rp.sel::before{background:#fff}
+
 /* ═══ VIEW TOGGLE ═══ */
 .view-toggle{display:flex;gap:4px;margin-bottom:12px}
 .vt-btn{flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;min-height:44px}
@@ -351,29 +361,10 @@ body.mo{overflow:hidden}
   </div>
 
   <!-- NON-LIVE STATE -->
+  <!-- NON-LIVE: RACE BROWSER -->
   <div id="nonLive">
-    <div class="view-toggle"><button class="vt-btn active" id="btnTower" onclick="setLiveView('tower')">Timing</button><button class="vt-btn" id="btnMap" onclick="setLiveView('map')">Track Map</button></div>
-    <div id="towerView">
-      <select id="raceSel" class="race-sel mb-12" onchange="selRace(this.value)"></select>
-      <div id="resSub" class="muted mb-12"></div>
-      <div class="card mb-16">
-        <div class="stabs" id="sTabs"><div class="stab" data-s="qualifying" onclick="selSess('qualifying')">Qualifying</div><div class="stab act" data-s="race" onclick="selSess('race')">Race</div></div>
-        <div id="timingData"><div class="skel-row"><div class="skel"></div><div class="skel" style="width:80%"></div></div></div>
-      </div>
-    </div>
-    <div id="mapView" style="display:none;padding:16px;position:relative">
-      <div id="mapContainer" style="width:100%;max-width:600px;margin:0 auto;position:relative;background:#0E1117;border-radius:8px;border:1px solid var(--border);overflow:hidden;touch-action:none;aspect-ratio:4/3">
-        <svg id="mapSvg" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block"><path id="trackPath" fill="none" stroke="#2A3145" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" d=""/><path id="trackCentre" fill="none" stroke="#1C2333" stroke-width="2" d=""/><g id="carDots"></g></svg>
-      </div>
-      <div id="mapTooltip" style="display:none;position:absolute;background:#1C2333;border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-size:12px;pointer-events:none;z-index:100;min-width:140px;color:#E8EAF0"></div>
-      <div id="mapOffline" style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px">
-        <div style="font-size:28px;margin-bottom:12px">🗺</div>
-        <div style="font-weight:700;color:var(--text);margin-bottom:6px">Track Map</div>
-        <div>Live car tracking activates when a session begins</div>
-        <div id="mapNextSess" style="margin-top:8px;color:var(--accent);font-weight:600"></div>
-        <button onclick="loadMapDemo()" style="margin-top:16px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer">Load Demo — Miami 2024</button>
-      </div>
-    </div>
+    <div class="race-pills" id="racePills"></div>
+    <div id="raceContent"></div>
   </div>
 </div>
 
@@ -886,6 +877,119 @@ function loadMapDemo(){
   }
   demoAnimate();
 }
+
+/* ═══ RACE BROWSER (non-live) ═══ */
+const RACE_DATA={
+  1:{name:'Australian Grand Prix',circuit:'Albert Park Circuit',date:'Mar 8',laps:58,wx:'Track 38°C \u00b7 Air 24°C \u00b7 Dry',
+    results:[{p:1,d:'George Russell',t:'Mercedes',tc:M,g:'Winner 1:24:22.381'},{p:2,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'+2.974s'},{p:3,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+15.519s'},{p:4,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+28.341s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+45.123s'},{p:6,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+58.234s'},{p:7,d:'Carlos Sainz',t:'Williams',tc:W,g:'+1:02.345'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+1:15.678'},{p:9,d:'Alexander Albon',t:'Williams',tc:W,g:'+1:28.901'},{p:10,d:'Esteban Ocon',t:'Haas',tc:H,g:'+1 Lap'}],
+    rc:['Lap 1: \u2705 Green flag \u2014 race start','Lap 23: \u2705 Overtake Mode enabled \u2014 T13','Lap 45: \ud83d\udfe3 Fastest lap \u2014 Antonelli 1:20.235','Lap 58: \ud83c\udfc1 Chequered flag \u2014 Russell wins'],
+    strats:[{d:'RUS',s:[{c:'S',l:5},{c:'M',l:20},{c:'H',l:33}]},{d:'ANT',s:[{c:'S',l:5},{c:'M',l:22},{c:'H',l:31}]},{d:'LEC',s:[{c:'M',l:10},{c:'H',l:48}]},{d:'HAM',s:[{c:'M',l:12},{c:'H',l:46}]}]},
+  2:{name:'Chinese Grand Prix',circuit:'Shanghai International Circuit',date:'Mar 15',laps:56,wx:'Track 44°C \u00b7 Air 29°C \u00b7 Dry',sprint:'P1 Antonelli P2 Russell P3 Norris',
+    results:[{p:1,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'Winner 1:33:15.607'},{p:2,d:'George Russell',t:'Mercedes',tc:M,g:'+5.515s'},{p:3,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+25.267s'},{p:4,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+31.445s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+42.123s'},{p:6,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+55.678s'},{p:7,d:'Fernando Alonso',t:'Aston Martin',tc:AM,g:'+1:02.345'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+1:18.901'},{p:9,d:'Liam Lawson',t:'Racing Bulls',tc:TB,g:'+1:25.234'},{p:10,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1:31.567'}],
+    rc:['Lap 1: \ud83d\udfe1 Safety car \u2014 multi-car incident T1','Lap 4: \u2705 Green flag \u2014 racing resumed','Lap 31: \ud83d\udfe3 Fastest lap \u2014 Russell 1:32.456','Lap 56: \ud83c\udfc1 Chequered flag \u2014 Antonelli wins'],
+    strats:[{d:'ANT',s:[{c:'M',l:15},{c:'H',l:41}]},{d:'RUS',s:[{c:'M',l:13},{c:'H',l:43}]},{d:'HAM',s:[{c:'H',l:56}]}]},
+  3:{name:'Japanese Grand Prix',circuit:'Suzuka Circuit',date:'Mar 29',laps:53,wx:'Track 32°C \u00b7 Air 18°C \u00b7 Dry',
+    results:[{p:1,d:'Kimi Antonelli',t:'Mercedes',tc:M,g:'Winner 1:28:03.403'},{p:2,d:'Oscar Piastri',t:'McLaren',tc:ML,g:'+13.722s'},{p:3,d:'Charles Leclerc',t:'Ferrari',tc:F,g:'+15.270s'},{p:4,d:'George Russell',t:'Mercedes',tc:M,g:'+22.156s'},{p:5,d:'Lando Norris',t:'McLaren',tc:ML,g:'+31.445s'},{p:6,d:'Lewis Hamilton',t:'Ferrari',tc:F,g:'+38.234s'},{p:7,d:'Pierre Gasly',t:'Alpine',tc:A,g:'+45.678s'},{p:8,d:'Max Verstappen',t:'Red Bull',tc:RB,g:'+52.901s'},{p:9,d:'Liam Lawson',t:'Racing Bulls',tc:TB,g:'+1:02.234'},{p:10,d:'Oliver Bearman',t:'Haas',tc:H,g:'+1:08.567'}],
+    rc:['Lap 22: \ud83d\udfe1 Safety car \u2014 Bearman incident T12','Lap 25: \u2705 Green flag \u2014 racing resumed','Lap 38: \ud83d\udfe3 Fastest lap \u2014 Antonelli 1:27.891','Lap 53: \ud83c\udfc1 Chequered flag \u2014 Antonelli wins'],
+    strats:[{d:'ANT',s:[{c:'M',l:21},{c:'M',l:32}]},{d:'PIA',s:[{c:'S',l:8},{c:'M',l:20},{c:'H',l:25}]},{d:'LEC',s:[{c:'M',l:22},{c:'H',l:31}]}]},
+};
+
+S.selRound=3;
+
+function initRaceBrowser(){
+  const el=document.getElementById('racePills');if(!el)return;
+  el.innerHTML=SCH.map(r=>{
+    const isCan=r.st==='can',isDone=r.st==='done',isNext=!isCan&&!isDone&&S.nr?.r===r.r;
+    const cls='rp'+(isDone?' done':'')+(isCan?' can':'')+(isNext?' next':'')+(S.selRound===r.r?' sel':'');
+    const label=r.r?('R'+r.r+' '+r.fl):('\u2014 '+r.fl);
+    return`<button class="${cls}" onclick="pickRace(${r.r||0})" data-r="${r.r||0}">${label}</button>`;
+  }).join('');
+  // Scroll selected into view
+  const sel=el.querySelector('.sel');if(sel)sel.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  renderRaceContent();
+}
+
+function pickRace(round){
+  if(!round)return;S.selRound=round;
+  document.querySelectorAll('.rp').forEach(b=>{b.classList.toggle('sel',parseInt(b.dataset.r)===round)});
+  renderRaceContent();
+}
+
+function renderRaceContent(){
+  const el=document.getElementById('raceContent');if(!el)return;
+  const rd=RACE_DATA[S.selRound];
+  const sch=SCH.find(r=>r.r===S.selRound);
+  if(!sch){el.innerHTML='<div class="empty">Select a race</div>';return}
+
+  // Cancelled
+  if(sch.st==='can'){
+    el.innerHTML=`<div style="text-align:center;padding:48px 20px;color:var(--muted)"><div style="font-family:var(--head);font-size:22px;font-weight:900;text-transform:uppercase;color:var(--text);margin-bottom:8px">${sch.n}</div><div style="font-size:13px;margin-bottom:8px">This race was removed from the 2026 calendar due to regional conflict.</div><div style="font-size:12px">No replacement event was announced.</div></div>`;
+    return;
+  }
+
+  // Completed race — full hub
+  if(rd){
+    const res=rd.results.map((r,i)=>`<div class="twr-row" style="grid-template-columns:28px 6px 1fr 48px"><div class="tr-pos${i===0?' tr-p1':i===1?' tr-p2':i===2?' tr-p3':''}">P${r.p}</div><div class="tr-bar" style="background:${r.tc}"></div><div class="tr-nm" style="font-size:12px">${r.d}</div><div class="tr-gp" style="font-size:10px">${r.g}</div></div>`).join('');
+    const rcHtml=rd.rc.map(m=>{let cls='rc-msg';if(m.includes('Safety')||m.includes('\ud83d\udfe1'))cls+=' rc-sc';else if(m.includes('Fastest')||m.includes('\ud83d\udfe3'))cls+=' rc-fl';else if(m.includes('Overtake')||m.includes('\u2705'))cls+=' rc-ot';return`<div class="${cls}" style="font-size:11px;padding:6px 10px;margin-bottom:4px">${m}</div>`}).join('');
+    const stratHtml=rd.strats.map(s=>{const blocks=s.s.map((st,i)=>{const bg=TYC[st.c]||'#888';const fg=TYT[st.c]||'#fff';const w=Math.max(st.l/rd.laps*100,5);return`<div class="st-blk" style="width:${w.toFixed(0)}%;background:${bg};color:${fg}">${st.c}${st.l}</div>`}).join('');return`<div class="st-row"><div class="st-nm">${s.d}</div><div class="st-trk">${blocks}</div></div>`}).join('');
+
+    el.innerHTML=`
+      <div class="sess-bar"><div style="font-weight:700;color:#fff">${rd.name} \u2014 Race Results</div><div style="color:var(--muted);font-size:10px">${rd.circuit} \u00b7 ${rd.date}</div></div>
+      <div class="wx-strip"><span>${rd.wx}</span></div>
+      ${rd.sprint?`<div style="padding:8px 16px;font-size:11px;background:#161B27;border-bottom:1px solid var(--border);color:var(--muted)"><strong style="color:var(--gold)">Sprint:</strong> ${rd.sprint}</div>`:''}
+      <div style="background:#0E1117"><div style="padding:0">${res}</div></div>
+      <div class="rc-sec"><div class="rc-title">Key Moments</div>${rcHtml}</div>
+      <div class="strat-sec"><div class="strat-title">Tyre Strategy</div>${stratHtml}</div>
+    `;
+    return;
+  }
+
+  // Next race — Miami preview
+  if(S.nr?.r===S.selRound){
+    el.innerHTML=`
+      <div style="background:linear-gradient(135deg,#1B1F2A,#0E1117);border-radius:8px;padding:20px;margin:12px 0;border:1px solid rgba(232,0,45,.2)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px">\u25b6 Round ${S.nr.r} \u2014 Next Race</div>
+        <div style="font-family:var(--head);font-size:28px;font-weight:900;color:#fff;text-transform:uppercase">${S.nr.n}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:4px">${sch.c} \u00b7 ${sch.dl}</div>
+      </div>
+      <div class="card mb-16"><div class="card-body" style="padding:0">
+        <div style="display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:600">Sprint Qualifying</span><span style="color:var(--muted)">May 1 \u00b7 10:30 AM ET</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:600">Sprint Race</span><span style="color:var(--muted)">May 2 \u00b7 9:00 AM ET</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px"><span style="font-weight:600">Qualifying</span><span style="color:var(--muted)">May 2 \u00b7 1:00 PM ET</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 16px;font-size:12px;background:rgba(232,0,45,.04)"><span style="font-weight:700;color:var(--accent)">Race</span><span style="color:var(--accent);font-weight:600">May 3 \u00b7 3:30 PM ET</span></div>
+      </div></div>
+      <div class="slabel">Circuit Info</div>
+      <div class="card mb-16"><div class="card-body" style="font-size:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Circuit</span><span style="font-weight:600">Miami International Autodrome</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Laps</span><span style="font-weight:600">57</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Distance</span><span style="font-weight:600">308.326 km</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Lap Record</span><span style="font-weight:600">1:29.708 (Verstappen 2023)</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">First GP</span><span style="font-weight:600">2022</span></div>
+      </div></div>
+      <div class="slabel">Championship Context</div>
+      <div class="card mb-16"><div class="card-body" style="font-size:12px;line-height:1.7;color:var(--dim)">
+        Antonelli leads with 72pts \u2014 9 ahead of Russell. Ferrari P3/P4 with Leclerc and Hamilton closing. Red Bull in crisis \u2014 Verstappen P9 with just 12pts. Mercedes have won all 3 races so far.
+      </div></div>
+      <div class="slabel">Picks</div>
+      <div class="card"><div class="card-body" style="text-align:center;color:var(--muted);font-size:12px;padding:24px">\ud83d\udd12 Picks drop when Miami odds go live ~Apr 27</div></div>
+    `;
+    return;
+  }
+
+  // Future race
+  el.innerHTML=`
+    <div style="text-align:center;padding:40px 20px">
+      <div style="font-family:var(--head);font-size:24px;font-weight:900;text-transform:uppercase;margin-bottom:4px">${sch.n}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">${sch.c} \u00b7 ${sch.dl}</div>
+      ${sch.sp?'<div style="margin-top:8px"><span class="sch-badge sb-sprint">Sprint Weekend</span></div>':''}
+      ${sch.nt?`<div style="font-size:11px;color:var(--muted);font-style:italic;margin-top:6px">${sch.nt}</div>`:''}
+      <div style="margin-top:20px;font-size:12px;color:var(--muted)">Preview available closer to race weekend</div>
+    </div>`;
+}
+
+// Override initRes to use race browser when non-live
+const _origInitRes=typeof initRes!=='undefined'?initRes:null;
+function initRes(){if(!S.isLive)initRaceBrowser();else if(_origInitRes)_origInitRes()}
 
 /* ═══ LIVE SESSION HUB ═══ */
 S.livePoller=null;S.liveLB=[];S.liveRC=[];S.liveStints={};S.liveWx=null;S.prevPos={};S.selDrv=null;S.flNum=null;S.trackBuilt=false;
