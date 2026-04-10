@@ -1,5 +1,5 @@
 import { fetchWT, sb, logSync, json, hashContent } from './lib/shared.js';
-import { buildSystemPrompt, validateArticle, buildLiveContext, TODAY } from './lib/accuracy.js';
+import { buildSystemPrompt, validateArticle, buildLiveContext, fixEncoding, TODAY } from './lib/accuracy.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const WORD_TARGETS = {
@@ -127,7 +127,12 @@ Target: ${wordTarget} words. Return ONLY valid JSON:
       parsed = { title: topicText, body: anyText || 'Generation failed', excerpt: (anyText || '').slice(0, 150), tags: ['ANALYSIS'], content_type: contentType };
     }
 
-    // 6. VALIDATION
+    // 6. Fix encoding before validation
+    parsed.title = fixEncoding(parsed.title);
+    parsed.body = fixEncoding(parsed.body);
+    parsed.excerpt = fixEncoding(parsed.excerpt);
+
+    // 7. VALIDATION
     const validation = validateArticle(parsed);
     if (!validation.valid) {
       console.error('[GridFeed] Validation failed:', validation.reason);

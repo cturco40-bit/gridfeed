@@ -143,6 +143,24 @@ export function validateArticle(article) {
   return { valid: true };
 }
 
+export function fixEncoding(text) {
+  if (!text) return text;
+  return text
+    .replace(/\u00e2\u20ac\u201c/g, '\u2014')
+    .replace(/\u00e2\u20ac\u201d/g, '\u2014')
+    .replace(/\u00e2\u20ac\u2122/g, '\u2019')
+    .replace(/\u00e2\u20ac\u2018/g, '\u2018')
+    .replace(/\u00e2\u20ac\u0153/g, '\u201c')
+    .replace(/\u00e2\u20ac\u009d/g, '\u201d')
+    .replace(/\u00e2\u20ac\u00a6/g, '\u2026')
+    .replace(/\u00c3\u00a9/g, '\u00e9')
+    .replace(/\u00c3\u00a8/g, '\u00e8')
+    .replace(/\u00c3\u00a0/g, '\u00e0')
+    .replace(/\u00c3\u00bc/g, '\u00fc')
+    .replace(/\u00c3\u00b6/g, '\u00f6')
+    .replace(/\u00c3\u00b1/g, '\u00f1');
+}
+
 export async function buildLiveContext() {
   const facts = await sb('driver_facts?select=driver_name,category,fact_text&season=eq.2026&order=driver_name.asc');
   const results = facts.filter(f => f.category === 'results' || f.category === 'form');

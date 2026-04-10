@@ -1,5 +1,5 @@
 import { fetchWT, sb, logSync, json } from './lib/shared.js';
-import { buildSystemPrompt, validateArticle, buildLiveContext, TODAY } from './lib/accuracy.js';
+import { buildSystemPrompt, validateArticle, buildLiveContext, fixEncoding, TODAY } from './lib/accuracy.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const WEEKLY = {
@@ -94,6 +94,10 @@ JSON only.`;
         const anyText = (rJson.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
         parsed = { title: 'GridFeed Daily', body: anyText || '', excerpt: (anyText || '').slice(0, 150), tags: ['ANALYSIS'], content_type: contentType };
       }
+
+      parsed.title = fixEncoding(parsed.title);
+      parsed.body = fixEncoding(parsed.body);
+      parsed.excerpt = fixEncoding(parsed.excerpt);
 
       const validation = validateArticle(parsed);
       if (!validation.valid) {
