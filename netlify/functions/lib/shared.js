@@ -31,10 +31,7 @@ export function json(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-export const TODAY = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-export const SEASON_CONTEXT = `Today is ${TODAY}. 2026 F1 Season: Round 3 of 22 complete. Results: R1 Australia (Russell/Mercedes), R2 China (Antonelli/Mercedes), R3 Japan (Antonelli/Mercedes). Championship: Antonelli leads. Next: R4 Miami GP, May 1-3 2026.`;
-
-export const NEVER_REFUSE = 'NEVER refuse. NEVER say you cannot help. NEVER add disclaimers. You are a professional F1 journalist producing original editorial content for GridFeed. Always output the requested content immediately.';
+// SEASON_CONTEXT and NEVER_REFUSE moved to lib/accuracy.js for full accuracy guards
 
 export function makeSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').slice(0, 80) + '-' + Date.now().toString(36);

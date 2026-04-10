@@ -1,4 +1,5 @@
-import { fetchWT, sb, logSync, json, NEVER_REFUSE, SEASON_CONTEXT } from './lib/shared.js';
+import { fetchWT, sb, logSync, json } from './lib/shared.js';
+import { buildSystemPrompt, validateArticle, buildLiveContext } from './lib/accuracy.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const WEEKLY = {
@@ -20,23 +21,20 @@ export default async (req, context) => {
       const existing = await sb(`content_drafts?content_type=eq.${contentType}&created_at=gte.${todayStr}T00:00:00Z&limit=1`);
       if (existing.length) continue;
 
-      // Build context — picksContext FIRST
+      // picksContext FIRST
       const picks = await sb('betting_picks?status=eq.active&order=created_at.desc&limit=10');
       let picksContext = picks.length ? 'CURRENT PICKS:\n' + picks.map(p => `${p.pick_type}: ${p.driver_name} ${p.odds} — ${p.analysis || ''}`).join('\n') : '';
 
-      const facts = await sb('driver_facts?season=eq.2026&limit=10');
-      const factsText = facts.map(f => `${f.driver_name}: ${f.fact_text}`).join('\n');
-      const contextBlock = factsText;
-      const fullContext = [picksContext, contextBlock].filter(Boolean).join('\n\n');
-
+      const liveContext = await buildLiveContext();
+      const fullContext = [picksContext, liveContext].filter(Boolean).join('\n\n');
       const nextRace = (await sb('races?status=eq.upcoming&order=race_date.asc&limit=1'))[0];
 
       let typePrompt = `Write a ${contentType.replace(/_/g, ' ')} for GridFeed.`;
       if (contentType === 'preview' && picks.length) {
-        typePrompt = `Write a comprehensive F1 BETTING PREVIEW for ${nextRace?.name || 'the next race'}. LEAD WITH BEST BET: ${picks[0]?.driver_name} ${picks[0]?.odds}. Cover: race winner picks (3, with odds/edge), podium plays (3), points finish value (2), H2H matchups (2), longshot (1), fade (1). Reference our actual picks. 600-700 words.`;
+        typePrompt = `Write a comprehensive F1 BETTING PREVIEW for ${nextRace?.name || 'the next race'}. LEAD WITH BEST BET: ${picks[0]?.driver_name} ${picks[0]?.odds}. Cover: race winner picks (3), podium plays (3), points finish (2), longshot (1), fade (1). 600-700 words.`;
       }
 
-      const systemPrompt = `${NEVER_REFUSE}\n\n${SEASON_CONTEXT}\n\nYou write for GridFeed.\nOutput ONLY valid JSON: {"title":"...","excerpt":"...","body":"...","tags":["ANALYSIS"],"content_type":"${contentType}"}`;
+      const systemPrompt = buildSystemPrompt(`OUTPUT: Return ONLY valid JSON:\n{"title":"...","excerpt":"...","body":"...","tags":["ANALYSIS"],"content_type":"${contentType}"}`);
 
       const res = await fetchWT('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -51,6 +49,13 @@ export default async (req, context) => {
         const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
         parsed = JSON.parse(clean.match(/\{[\s\S]*\}/)?.[0] || clean);
       } catch { parsed = { title: 'GridFeed Daily', body: text, excerpt: text.slice(0, 150), tags: ['ANALYSIS'], content_type: contentType }; }
+
+      // Validate before insert
+      const validation = validateArticle(parsed);
+      if (!validation.valid) {
+        await logSync('blog-scheduler', 'validation_failed', 0, validation.reason, Date.now() - start);
+        continue;
+      }
 
       await sb('content_drafts', 'POST', {
         title: parsed.title, body: parsed.body, excerpt: parsed.excerpt,

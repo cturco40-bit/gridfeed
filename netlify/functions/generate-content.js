@@ -1,15 +1,11 @@
-import { fetchWT, sb, logSync, json, NEVER_REFUSE, SEASON_CONTEXT, hashContent } from './lib/shared.js';
+import { fetchWT, sb, logSync, json, hashContent } from './lib/shared.js';
+import { buildSystemPrompt, validateArticle, buildLiveContext, SEASON_CONTEXT } from './lib/accuracy.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const WORD_TARGETS = {
   breaking: '150-200', race_recap: '450-500', qualifying_recap: '350-400', practice_analysis: '300-350',
   preview: '400-450', strategy_analysis: '350-400', championship_update: '250-300', morning_briefing: '300-350', analysis: '400-500',
 };
-const QUALITY_RULES = `Lead sentence must contain a specific name + number.
-Banned words: fascinating, incredible, dominant, stunning, masterclass, trajectory, wheelhouse.
-Banned phrases: it's worth noting, as we can see, it's important to remember.
-Include minimum 3 specific data points (lap times / gaps / positions / points).
-End with one forward-looking sentence about the next race.`;
 
 export default async (req, context) => {
   const start = Date.now();
@@ -23,7 +19,6 @@ export default async (req, context) => {
     let topicText = topic?.topic || 'F1 2026 Season Analysis';
 
     if (!topic) {
-      // Check if morning briefing needed
       const hour = new Date().getUTCHours();
       if (hour < 8) { contentType = 'morning_briefing'; topicText = 'Morning Briefing'; }
       else {
@@ -32,38 +27,36 @@ export default async (req, context) => {
       }
     }
 
-    // 2. Build context — picksContext FIRST
+    // 2. Build context — picksContext FIRST (never change this order)
     const picks = await sb('betting_picks?status=eq.active&order=created_at.desc&limit=10');
     let picksContext = '';
     if (picks.length) {
       picksContext = 'CURRENT PICKS:\n' + picks.map(p => `${p.pick_type}: ${p.driver_name} ${p.odds} — ${p.analysis || ''}`).join('\n');
     }
 
+    // Live driver data from driver_facts
+    const liveContext = await buildLiveContext();
+
     // Leaderboard
     const board = await sb('leaderboard?order=fetched_at.desc,position.asc&limit=10');
-    const boardText = board.length ? 'LATEST STANDINGS:\n' + board.map(r => `P${r.position}: ${r.driver_name} (${r.team_name})`).join('\n') : '';
+    const boardText = board.length ? 'LATEST SESSION:\n' + board.map(r => `P${r.position}: ${r.driver_name} (${r.team_name})`).join('\n') : '';
 
-    // Driver facts
-    const facts = await sb('driver_facts?season=eq.2026&limit=15');
-    const factsText = facts.length ? 'DRIVER INTEL:\n' + facts.map(f => `${f.driver_name} [${f.category}]: ${f.fact_text}`).join('\n') : '';
-
-    const contextBlock = [boardText, factsText].filter(Boolean).join('\n\n');
+    const contextBlock = [liveContext, boardText].filter(Boolean).join('\n\n');
     const fullContext = [picksContext, contextBlock].filter(Boolean).join('\n\n');
 
-    // 3. Build prompt
+    // 3. Build prompt with full accuracy guards
     const wordTarget = WORD_TARGETS[contentType] || '400-500';
-    const systemPrompt = `${NEVER_REFUSE}\n\n${SEASON_CONTEXT}\n\nYou write for GridFeed, an F1 digital publication.\n${QUALITY_RULES}\n\nOutput ONLY valid JSON: {"title":"...","excerpt":"first 150 chars","body":"full article","tags":["RACE"],"content_type":"${contentType}"}`;
+    const systemPrompt = buildSystemPrompt(`OUTPUT: Return ONLY valid JSON with no markdown fences:\n{"title":"...","excerpt":"first 150 chars","body":"full article","tags":["RACE"],"content_type":"${contentType}"}`);
 
     const userPrompt = `Write a ${contentType.replace(/_/g, ' ')} article. Topic: ${topicText}\n\n${fullContext}\n\nTarget: ${wordTarget} words. JSON only.`;
 
     // 4. Call Claude
-    const apiCall = fetchWT('https://api.anthropic.com/v1/messages', {
+    const response = await fetchWT('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
     }, 25000);
 
-    const response = await apiCall;
     const rJson = await response.json();
     const text = rJson.content?.[0]?.text || '';
 
@@ -71,13 +64,20 @@ export default async (req, context) => {
     let parsed;
     try {
       const clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-      const match = clean.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(match?.[0] || clean);
+      parsed = JSON.parse(clean.match(/\{[\s\S]*\}/)?.[0] || clean);
     } catch {
       parsed = { title: topicText, body: text, excerpt: text.slice(0, 150), tags: ['ANALYSIS'], content_type: contentType };
     }
 
-    // 6. Dedup check
+    // 6. VALIDATION — reject hallucinated content
+    const validation = validateArticle(parsed);
+    if (!validation.valid) {
+      console.error('[GridFeed] Validation failed:', validation.reason);
+      await logSync('generate-content', 'validation_failed', 0, validation.reason, Date.now() - start);
+      return json({ ok: true, generated: 0, skipped: 'Validation failed', reason: validation.reason });
+    }
+
+    // 7. Dedup check
     const h = hashContent(parsed.body || '');
     const existing = await sb(`content_hashes?hash=eq.${h}&limit=1`);
     if (existing.length) {
@@ -85,7 +85,7 @@ export default async (req, context) => {
       return json({ ok: true, generated: 0, reason: 'duplicate' });
     }
 
-    // 7. Insert draft
+    // 8. Insert draft
     await sb('content_drafts', 'POST', {
       title: parsed.title, body: parsed.body, excerpt: parsed.excerpt,
       tags: parsed.tags || ['ANALYSIS'], content_type: parsed.content_type || contentType,
@@ -94,11 +94,11 @@ export default async (req, context) => {
       race_id: topic?.race_id || null,
     });
 
-    // 8. Insert hash + mark topic
+    // 9. Hash + topic update
     await sb('content_hashes', 'POST', { hash: h, type: contentType, source: 'generate-content' });
     if (topic?.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'drafted' });
 
-    // 9. Fire notify (no await)
+    // 10. Notify (fire and forget)
     fetchWT('/.netlify/functions/notify-draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: parsed.title, content_type: contentType, priority_score: topic?.priority || 5, excerpt: (parsed.excerpt || '').slice(0, 200) }) }, 5000).catch(() => {});
 
     await logSync('generate-content', 'success', 1, `Draft: "${parsed.title}" (${contentType})`, Date.now() - start);

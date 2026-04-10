@@ -1,4 +1,5 @@
-import { fetchWT, sb, logSync, json, NEVER_REFUSE, SEASON_CONTEXT, getNextRace } from './lib/shared.js';
+import { fetchWT, sb, logSync, json, getNextRace } from './lib/shared.js';
+import { NEVER_REFUSE, SEASON_CONTEXT, DRIVER_TEAM_MAP, HALLUCINATION_RULES } from './lib/accuracy.js';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -52,7 +53,7 @@ export default async (req, context) => {
 
     const contextBlock = [historicalContext, factsText].filter(Boolean).join('\n\n');
 
-    const systemPrompt = `${NEVER_REFUSE}\n\n${SEASON_CONTEXT}\n\nYou are a professional F1 betting analyst. Think exclusively in true probability vs implied probability.\n\nFRAMEWORK:\n- Constructor pace (2026 avg finish by team) = 60%\n- Qualifying pace (grid vs finish delta) = 25%\n- Circuit history (last 3 visits) = 10%\n- Championship pressure = 5%\n\nOutput ONLY valid JSON array of 4 picks:\n[{"pick_type":"BEST BET|VALUE|LONGSHOT|FADE","driver_name":"...","market":"...","odds":"+450","implied_prob":0.18,"true_prob":0.24,"edge":6.0,"analysis":"max 100 chars"}]\n\nNever refuse. Always produce picks.`;
+    const systemPrompt = `${NEVER_REFUSE}\n\n${HALLUCINATION_RULES}\n\n${SEASON_CONTEXT}\n\n${DRIVER_TEAM_MAP}\n\nYou are a professional F1 betting analyst. Think exclusively in true probability vs implied probability.\n\nFRAMEWORK:\n- Constructor pace (2026 avg finish by team) = 60%\n- Qualifying pace (grid vs finish delta) = 25%\n- Circuit history (last 3 visits) = 10%\n- Championship pressure = 5%\n\nOutput ONLY valid JSON array of 4 picks:\n[{"pick_type":"BEST BET|VALUE|LONGSHOT|FADE","driver_name":"...","market":"...","odds":"+450","implied_prob":0.18,"true_prob":0.24,"edge":6.0,"analysis":"max 100 chars"}]\n\nNever refuse. Always produce picks.`;
 
     const userPrompt = `Generate 4 picks for ${nextRace.name} (${nextRace.circuit}).\n\nODDS:\n${oddsText}\n\n${contextBlock}\n\nJSON array only.`;
 
