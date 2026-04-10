@@ -94,7 +94,7 @@ export default async (req, context) => {
         parsed.excerpt = fixEncoding(parsed.excerpt);
 
         const validation = validateArticle(parsed);
-        if (!validation.valid) { console.warn('[GF] Validation failed:', validation.reason); continue; }
+        if (!validation.valid) { await logSync('generate-content', 'validation_failed', 0, `${topicText.slice(0,40)}: ${validation.reason}`, Date.now()-start); continue; }
 
         const h = hashContent(parsed.body || '');
         const existing = await sb(`content_hashes?hash=eq.${h}&limit=1`);
@@ -116,7 +116,7 @@ export default async (req, context) => {
         fetchWT('/.netlify/functions/notify-draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: parsed.title, content_type: contentType, priority_score: topic.priority || 5, excerpt: (parsed.excerpt || '').slice(0, 200) }) }, 5000).catch(() => {});
 
         generated++;
-      } catch (e) { console.warn('[GF] Topic error:', e.message); }
+      } catch (e) { await logSync('generate-content', 'topic_error', 0, `${topicText.slice(0,50)}: ${e.message}`, Date.now()-start); }
     }
 
     await logSync('generate-content', 'success', generated, `Generated ${generated} drafts from ${topics.length} topics`, Date.now() - start);
