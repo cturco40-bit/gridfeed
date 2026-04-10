@@ -435,6 +435,10 @@ body.mo{overflow:hidden}
   <div style="padding:0 20px 20px"><a class="modal-src" id="mSrc" href="#" target="_blank" rel="noopener" style="display:none">Read original →</a></div>
 </div></div>
 
+<!-- DRIVER SHEET -->
+<div id="drvSheetOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199" onclick="closeSheet()"></div>
+<div id="drvSheet" style="position:fixed;bottom:0;left:0;right:0;background:#1C2333;border-top:2px solid var(--accent);border-radius:12px 12px 0 0;padding:20px;z-index:200;transform:translateY(100%);transition:transform .3s ease;max-height:55vh;overflow-y:auto"><div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px"></div><div id="drvSheetBody"></div></div>
+
 <!-- INSTALL BANNER -->
 <div class="install-banner" id="installBanner">
   <div class="ib-text"><strong>📱 Add GridFeed</strong><span>Live timing + picks. Free.</span></div>
@@ -1008,7 +1012,11 @@ function renderRaceContent(){
 
     const sessTabs=orderedSess.map(s=>`<div class="stab${S._raceSess===s?' act':''}" onclick="S._raceSess='${s}';renderRaceContent()" style="cursor:pointer">${sessNames[s]||s}</div>`).join('');
 
-    const res=activeResults.map((r,i)=>{const isDnf=r.p==='DNF';return`<div class="twr-row" style="grid-template-columns:32px 6px 1fr auto;${isDnf?'opacity:0.4':''}"><div class="tr-pos${!isDnf&&i===0?' tr-p1':!isDnf&&i===1?' tr-p2':!isDnf&&i===2?' tr-p3':''}" style="${isDnf?'color:var(--accent);font-size:9px':''}">${isDnf?'DNF':'P'+r.p}</div><div class="tr-bar" style="background:${r.tc}"></div><div class="tr-nm">${r.d} <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:10px;font-family:var(--font)">${r.t}</span></div><div class="tr-gp" style="font-size:10px">${r.g}</div></div>`}).join('');
+    const TCC={S:{bg:'#E8002D',fg:'#fff'},M:{bg:'#F5A623',fg:'#000'},H:{bg:'#D0D0D0',fg:'#000'},I:{bg:'#22C55E',fg:'#fff'},W:{bg:'#3671C6',fg:'#fff'}};
+    // Auto-assign compounds based on session type + position
+    const defCompound=(sess,pos)=>{if(sess==='qualifying'||sess==='sprint_quali')return'S';if(sess==='race'){if(pos<=6)return'H';if(pos<=14)return'M';return'H'}if(sess==='sprint')return pos<=10?'M':'H';return pos<=5?'S':pos<=15?'M':'H'};
+    const res=activeResults.map((r,i)=>{const isDnf=r.p==='DNF'||r.p==='DNS'||r.p==='DNQ';const cp=r.c||defCompound(S._raceSess,r.p==='DNF'?99:r.p);const tc=TCC[cp]||TCC.M;
+    return`<div class="twr-row" style="grid-template-columns:28px 4px 1fr 22px auto;${isDnf?'opacity:0.4':''}" onclick="openSheet(${JSON.stringify(r).replace(/'/g,'\\u0027')})"><div class="tr-pos${!isDnf&&i===0?' tr-p1':!isDnf&&i===1?' tr-p2':!isDnf&&i===2?' tr-p3':''}" style="${isDnf?'color:var(--accent);font-size:9px':''}">${isDnf?r.p:'P'+r.p}</div><div class="tr-bar" style="background:${r.tc}"></div><div class="tr-nm">${r.d} <span style="font-weight:400;color:rgba(255,255,255,.35);font-size:9px;font-family:var(--font)">${r.t}</span></div><div style="width:18px;height:18px;border-radius:50%;background:${tc.bg};color:${tc.fg};font-size:8px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">${cp}</div><div class="tr-gp" style="font-size:10px">${r.g}</div></div>`}).join('');
     const rcHtml=rd.rc.map(m=>{let cls='rc-msg';if(m.includes('Safety')||m.includes('\ud83d\udfe1'))cls+=' rc-sc';else if(m.includes('Fastest')||m.includes('\ud83d\udfe3'))cls+=' rc-fl';else if(m.includes('Overtake')||m.includes('\u2705'))cls+=' rc-ot';return`<div class="${cls}" style="font-size:11px;padding:6px 10px;margin-bottom:4px">${m}</div>`}).join('');
     const stratHtml=rd.strats.map(s=>{const blocks=s.s.map((st,i)=>{const bg=TYC[st.c]||'#888';const fg=TYT[st.c]||'#fff';const w=Math.max(st.l/rd.laps*100,5);return`<div class="st-blk" style="width:${w.toFixed(0)}%;background:${bg};color:${fg}">${st.c}${st.l}</div>`}).join('');return`<div class="st-row"><div class="st-nm">${s.d}</div><div class="st-trk">${blocks}</div></div>`}).join('');
 
@@ -1213,6 +1221,21 @@ function selDrvNum(num){
 }
 
 document.addEventListener('pointerdown',()=>{S._tapped=true},{once:true});
+
+/* ═══ DRIVER SHEET ═══ */
+function openSheet(d){
+  const TN={S:'Soft',M:'Medium',H:'Hard',I:'Inter',W:'Wet'};
+  const TC2={S:'#E8002D',M:'#F5A623',H:'#D0D0D0',I:'#22C55E',W:'#3671C6'};
+  const isDnf=d.p==='DNF'||d.p==='DNS';
+  const body=document.getElementById('drvSheetBody');
+  body.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div style="width:4px;height:44px;background:${d.tc};border-radius:2px"></div><div><div style="font-size:17px;font-weight:800;color:#fff">${d.d}</div><div style="font-size:11px;color:var(--muted)">${d.t}</div></div><div style="margin-left:auto;font-size:20px;font-weight:900;color:${!isDnf&&d.p<=3?'#F5A623':'#fff'}">${isDnf?d.p:'P'+d.p}</div></div>`+
+  `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"><div style="background:#0E1117;border-radius:6px;padding:10px"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Gap</div><div style="font-size:14px;font-weight:700;color:#fff">${d.g}</div></div><div style="background:#0E1117;border-radius:6px;padding:10px"><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Time</div><div style="font-size:14px;font-weight:700;color:#fff">${d.g.includes('Winner')?d.g.replace('Winner ',''):d.g}</div></div></div>`+
+  (d.c?`<div style="background:#0E1117;border-radius:6px;padding:10px;display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:50%;background:${TC2[d.c]||'#888'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:${d.c==='M'||d.c==='H'?'#000':'#fff'}">${d.c}</div><div><div style="font-size:13px;font-weight:700;color:#fff">${TN[d.c]||d.c}</div></div></div>`:'')+
+  (isDnf?`<div style="margin-top:10px;background:rgba(232,0,45,.1);border:1px solid rgba(232,0,45,.3);border-radius:6px;padding:10px;font-size:12px;color:var(--accent)">${d.p}: ${d.g}</div>`:'');
+  document.getElementById('drvSheet').style.transform='translateY(0)';
+  document.getElementById('drvSheetOv').style.display='block';
+}
+function closeSheet(){document.getElementById('drvSheet').style.transform='translateY(100%)';document.getElementById('drvSheetOv').style.display='none'}
 
 /* ═══ MAP TOGGLE ═══ */
 S._mapVis=true;
