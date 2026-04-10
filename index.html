@@ -593,7 +593,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMod()});
 
 /* ═══ RESULTS ═══ */
 async function initRes(){
-  const sel=document.getElementById('raceSel');
+  if(!S.isLive){initRaceBrowser();return}
+  const sel=document.getElementById('raceSel');if(!sel)return;
   const opts=Object.keys(FR).map(k=>`<option value="fb:${k}">${k} (${FR[k].date})</option>`);
   sel.innerHTML=opts.join('');sel.selectedIndex=sel.options.length-1;
   selRace(sel.value);
@@ -1010,9 +1011,7 @@ function renderRaceContent(){
     </div>`;
 }
 
-// Override initRes to use race browser when non-live
-const _origInitRes=typeof initRes!=='undefined'?initRes:null;
-function initRes(){if(!S.isLive)initRaceBrowser();else if(_origInitRes)_origInitRes()}
+// initRes is patched below in boot to call initRaceBrowser when non-live
 
 /* ═══ LIVE SESSION HUB ═══ */
 S.livePoller=null;S.liveLB=[];S.liveRC=[];S.liveStints={};S.liveWx=null;S.prevPos={};S.selDrv=null;S.flNum=null;S.trackBuilt=false;
