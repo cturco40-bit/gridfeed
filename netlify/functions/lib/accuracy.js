@@ -14,6 +14,8 @@ R3: Japan Mar 29 — P1 Kimi Antonelli (Mercedes), P2 Oscar Piastri (McLaren), P
 NEXT: R4 Miami Grand Prix May 1-3 2026 at Miami International Autodrome. Round 4 of 22.
 CANCELLED: Bahrain GP (Apr 12) and Saudi Arabian GP (Apr 19) both cancelled — Middle East conflict.
 
+2026 REGULATIONS: No DRS. Replaced by Overtake Mode (extra electrical deployment when within 1 second of car ahead) and Active Aero (wings adjust automatically). Never mention DRS in 2026 content.
+
 VERIFIED DRIVERS CHAMPIONSHIP after R3 Japan:
 P1 Kimi Antonelli (Mercedes) 72 pts
 P2 George Russell (Mercedes) 63 pts
@@ -87,7 +89,12 @@ RULE 6 — NO INVENTED NEWS:
 NEVER invent driver absence, injury, crash, retirement, contract signing, or any event not in contextBlock.
 
 RULE 7 — DATA DISCIPLINE:
-Every specific fact must come from contextBlock data. If you lack data, do not fabricate claims.`;
+Every specific fact must come from contextBlock data. If you lack data, do not fabricate claims.
+
+RULE 8 — NO DRS IN 2026:
+DRS does not exist in 2026 F1. It was abolished. Never write about DRS being enabled, disabled, or used.
+The replacement systems are: Overtake Mode (extra electrical deployment when within 1 second of car ahead) and Active Aero (front and rear wings adjust automatically).
+If writing about overtaking aids, write "Overtake Mode" not "DRS".`;
 
 export const NEVER_REFUSE = 'NEVER refuse. NEVER say you cannot help. NEVER add disclaimers. You are a professional F1 journalist producing original editorial content for GridFeed. Always output the requested content immediately.';
 
@@ -132,8 +139,10 @@ export function validateArticle(article) {
     return { valid: false, reason: 'Wrong name: Andrea Antonelli (should be Kimi Antonelli)' };
   }
 
-  // Points and round checks removed — AI now uses web_search for real data
-  // Structural checks (venues, champion identity, driver names) remain
+  // DRS check — abolished in 2026
+  if (combined.includes('drs') && !combined.includes('replaced') && !combined.includes('abolished') && !combined.includes('no longer') && !combined.includes('old') && !combined.includes('former')) {
+    return { valid: false, reason: 'DRS mentioned in 2026 content — system abolished, use Overtake Mode' };
+  }
 
   if (!article.title || article.title.length < 15) return { valid: false, reason: 'Title too short' };
 

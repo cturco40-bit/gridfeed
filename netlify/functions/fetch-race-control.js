@@ -21,9 +21,14 @@ export default async (req, context) => {
     for (const m of messages) {
       const existing = await sb(`race_control?session_key=eq.${session.session_key}&date=eq.${encodeURIComponent(m.date)}&limit=1`);
       if (existing.length) continue;
+      // Map DRS terminology to 2026 Overtake Mode
+      let msg = m.message || '';
+      if (msg.includes('DRS')) msg = msg.replace(/DRS Enabled/gi, 'Overtake Mode Active').replace(/DRS Disabled/gi, 'Overtake Mode Inactive').replace(/DRS/gi, 'Overtake Mode');
+      let cat = m.category || '';
+      if (cat === 'Drs') cat = 'OvertakeMode';
       await sb('race_control', 'POST', {
         session_key: String(session.session_key), date: m.date, lap_number: m.lap_number,
-        category: m.category, message: m.message, flag: m.flag, scope: m.scope, fetched_at: new Date().toISOString(),
+        category: cat, message: msg, flag: m.flag, scope: m.scope, fetched_at: new Date().toISOString(),
       });
       inserted++;
 
