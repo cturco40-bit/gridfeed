@@ -218,12 +218,20 @@ export function validateArticle(article) {
   console.log('[validateArticle] PASSED age facts');
 
   // ── D. CHAMPIONSHIP CLAIMS ──
-  if (combined.includes('defending champion')) {
-    const defIdx = combined.indexOf('defending champion');
-    const nearDef = combined.slice(Math.max(0, defIdx - 60), defIdx + 80);
-    if (nearDef.includes('verstappen')) { console.log('[validateArticle] REJECTED — Verstappen defending champ'); return { valid: false, reason: 'Hallucination: Verstappen called defending champion (Norris is 2025 champ)' }; }
-    if (nearDef.includes('russell')) { console.log('[validateArticle] REJECTED — Russell defending champ'); return { valid: false, reason: 'Hallucination: Russell called defending champion (Norris is 2025 champ)' }; }
-    if (nearDef.includes('hamilton')) { console.log('[validateArticle] REJECTED — Hamilton defending champ'); return { valid: false, reason: 'Hallucination: Hamilton called defending champion (Norris is 2025 champ)' }; }
+  // Only reject when "defending/reigning champion" is directly attributed to the wrong driver
+  // ALLOWED: "4-time champion Verstappen", "former champion Hamilton", "2008 champion Hamilton"
+  const wrongChampPatterns = [
+    /defending champion[^.]{0,30}\b(verstappen|russell|hamilton)\b/,
+    /\b(verstappen|russell|hamilton)[^.]{0,15}defending champion/,
+    /reigning champion[^.]{0,30}\b(verstappen|russell|hamilton)\b/,
+    /\b(verstappen|russell|hamilton)[^.]{0,15}reigning champion/,
+  ];
+  for (const pattern of wrongChampPatterns) {
+    const match = combined.match(pattern);
+    if (match) {
+      console.log('[validateArticle] REJECTED — Wrong defending champion:', match[0].slice(0, 50));
+      return { valid: false, reason: 'Wrong defending champion: ' + match[0].slice(0, 50) };
+    }
   }
   console.log('[validateArticle] PASSED championship claims');
 

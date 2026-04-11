@@ -6,7 +6,19 @@ const TEAMS = ['Ferrari','Mercedes','McLaren','RedBull','Red Bull','AstonMartin'
 const EVENTS = ['crash','penalty','contract','engine','dnf','pole','fastest','championship','transfer','injury','retire','ban','protest','appeal','fire','safety','overtake'];
 const TIER1 = ['Verstappen','Hamilton','Leclerc','Norris','Antonelli'];
 const CIRCUITS = ['Melbourne','Shanghai','Suzuka','Miami','Montreal','Monaco','Barcelona','Madrid','Spielberg','Silverstone','Spa','Budapest','Zandvoort','Monza','Baku','Singapore','Austin','Mexico','Interlagos','Las Vegas','Lusail','Abu Dhabi','Australia','China','Japan','Austria','Belgium','Hungary','Netherlands','Italy','Azerbaijan','Qatar'];
-const NON_F1 = ['nascar','indycar','motogp','wrc','formula e','bristol','daytona','talladega','supercars','moto2','moto3','dtm','imsa'];
+const NON_F1 = [
+  'nascar','indycar','indy 500','motogp','wec','le mans','rally','wrc',
+  'formula e','super formula','f2','f3','supercars','moto2','moto3','dtm','imsa',
+  'bristol motor','daytona','talladega','darlington','martinsville',
+  'phoenix raceway','kansas speedway','richmond raceway','pocono',
+  'sonoma raceway','watkins glen',
+];
+const F1_KEYWORDS = [
+  'f1','formula 1','formula one','grand prix',
+  ...DRIVERS.map(d => d.toLowerCase()),
+  ...TEAMS.map(t => t.toLowerCase()),
+  ...CIRCUITS.map(c => c.toLowerCase()),
+];
 
 const RSS_FEEDS = [
   { url: 'https://www.formula1.com/content/fom-website/en/latest.xml', source: 'Formula1.com', region: 'INT' },
@@ -91,8 +103,13 @@ export default async (req, context) => {
     );
     feedResults.forEach(r => { if (r.status === 'fulfilled') headlines.push(...r.value); });
 
-    // Filter non-F1
-    const f1Headlines = headlines.filter(h => !NON_F1.some(kw => h.title.toLowerCase().includes(kw)));
+    // Filter non-F1: reject if any non-F1 keyword present, then require at least one F1 keyword
+    const f1Headlines = headlines.filter(h => {
+      const t = h.title.toLowerCase();
+      if (NON_F1.some(kw => t.includes(kw))) return false;
+      if (!F1_KEYWORDS.some(kw => t.includes(kw))) return false;
+      return true;
+    });
 
     // Group by signature
     const sigGroups = {};
