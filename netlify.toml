@@ -50,6 +50,26 @@
 [functions."send-push"]
   timeout = 10
 
+[functions."fetch-intervals"]
+  schedule = "*/2 * * * *"
+
+[functions."fetch-laps"]
+  schedule = "*/2 * * * *"
+
+[functions."fetch-pit"]
+  schedule = "*/2 * * * *"
+
+[functions."fetch-overtakes"]
+  schedule = "*/2 * * * *"
+
+[functions."push-schedule"]
+  schedule = "0 */1 * * *"
+
+[[redirects]]
+  from = "/driver/*"
+  to = "/index.html"
+  status = 200
+
 [[redirects]]
   from = "/gf-admin-drafts"
   to = "/gf-admin-drafts.html"

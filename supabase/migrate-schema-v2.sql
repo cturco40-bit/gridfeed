@@ -443,6 +443,89 @@ EXCEPTION WHEN others THEN NULL;
 END $$;
 
 -- ============================================================
+-- PART 8 — ADDITIONAL TABLES (predictions, intervals, laps, pits)
+-- ============================================================
+
+-- 13. predictions
+CREATE TABLE IF NOT EXISTS predictions (
+  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  device_id       text NOT NULL,
+  race_id         uuid REFERENCES races(id) ON DELETE CASCADE,
+  p1              text,
+  p2              text,
+  p3              text,
+  pole            text,
+  fastest_lap     text,
+  first_dnf       text,
+  points_earned   int DEFAULT 0,
+  created_at      timestamptz DEFAULT now(),
+  UNIQUE(device_id, race_id)
+);
+
+-- 14. intervals
+CREATE TABLE IF NOT EXISTS intervals (
+  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  race_id         uuid REFERENCES races(id) ON DELETE CASCADE,
+  session_key     int,
+  driver_number   int NOT NULL,
+  gap_to_leader   text,
+  "interval"      text,
+  date            timestamptz,
+  fetched_at      timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_intervals_session ON intervals(session_key, driver_number);
+
+-- 15. lap_times
+CREATE TABLE IF NOT EXISTS lap_times (
+  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  race_id         uuid REFERENCES races(id) ON DELETE CASCADE,
+  session_key     int,
+  driver_number   int NOT NULL,
+  lap_number      int,
+  lap_duration    numeric,
+  sector_1        numeric,
+  sector_2        numeric,
+  sector_3        numeric,
+  i1_speed        int,
+  i2_speed        int,
+  st_speed        int,
+  is_pit_out_lap  boolean DEFAULT false,
+  is_personal_best boolean DEFAULT false,
+  fetched_at      timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_laps_session ON lap_times(session_key, driver_number, lap_number);
+
+-- 16. pit_stops
+CREATE TABLE IF NOT EXISTS pit_stops (
+  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  race_id         uuid REFERENCES races(id) ON DELETE CASCADE,
+  session_key     int,
+  driver_number   int NOT NULL,
+  lap_number      int,
+  stop_duration   numeric,
+  lane_duration   numeric,
+  date            timestamptz,
+  fetched_at      timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pits_race ON pit_stops(race_id, driver_number);
+
+-- RLS for new tables
+DO $$ BEGIN ALTER TABLE predictions ENABLE ROW LEVEL SECURITY; EXCEPTION WHEN others THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE intervals ENABLE ROW LEVEL SECURITY; EXCEPTION WHEN others THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE lap_times ENABLE ROW LEVEL SECURITY; EXCEPTION WHEN others THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE pit_stops ENABLE ROW LEVEL SECURITY; EXCEPTION WHEN others THEN NULL; END $$;
+
+DO $$ BEGIN CREATE POLICY "Public read predictions" ON predictions FOR SELECT USING (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Public write predictions" ON predictions FOR INSERT WITH CHECK (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Public read intervals" ON intervals FOR SELECT USING (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Service write intervals" ON intervals FOR INSERT WITH CHECK (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Service delete intervals" ON intervals FOR DELETE USING (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Public read lap_times" ON lap_times FOR SELECT USING (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Service write lap_times" ON lap_times FOR INSERT WITH CHECK (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Public read pit_stops" ON pit_stops FOR SELECT USING (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "Service write pit_stops" ON pit_stops FOR INSERT WITH CHECK (true); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
 -- VERIFICATION — list all tables
 -- ============================================================
 

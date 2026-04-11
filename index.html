@@ -106,7 +106,10 @@ img{display:block;max-width:100%}
 .art-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px;cursor:pointer;min-height:44px;transition:transform .1s,box-shadow .1s;-webkit-tap-highlight-color:transparent}
 .art-card:active{transform:scale(.99)}
 .art-tag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-bottom:8px}
-.tag-race{background:#FEE2E2;color:#991B1B}.tag-qual{background:#DBEAFE;color:#1E40AF}.tag-betting{background:#FEF3C7;color:#92400E}.tag-preview{background:#F0FDF4;color:#166534}.tag-analysis{background:#F5F3FF;color:#5B21B6}.tag-breaking{background:var(--accent);color:#fff}
+.tag-race{background:#FEE2E2;color:#991B1B}.tag-qual{background:#DBEAFE;color:#1E40AF}.tag-betting{background:#FEF3C7;color:#92400E}.tag-preview{background:#F0FDF4;color:#166534}.tag-analysis{background:#F5F3FF;color:#5B21B6}.tag-breaking{background:var(--accent);color:#fff}.tag-rumour{background:#FFF7ED;color:#C2410C}
+/* ═══ DARK MODE ═══ */
+body.dark{--bg:#0E1117;--card:#1C2333;--text:#E8EAF0;--dim:#A0A8B8;--muted:#5A6178;--border:#2A3145}
+body{transition:background-color .2s,color .2s}
 .art-title{font-family:var(--head);font-size:17px;font-weight:800;line-height:1.3;color:var(--text);letter-spacing:-.2px;margin-bottom:6px;text-transform:uppercase}
 .art-by{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .art-by::before{content:'';display:inline-block;width:4px;height:4px;background:var(--muted);border-radius:50%}
@@ -291,6 +294,7 @@ body.mo{overflow:hidden}
   <a href="/" onclick="go('home');return false"><img src="/logo.png" alt="GridFeed" class="hdr-logo"/></a>
   <div class="hdr-right">
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div>LIVE</div>
+    <button class="notif-btn" id="darkBtn" onclick="toggleDark()" style="font-size:13px">D</button>
     <button class="notif-btn" id="notifBtn" onclick="regPush()">🔔</button>
   </div>
 </div></header>
@@ -461,7 +465,7 @@ const TC={red_bull:'#3671C6',ferrari:'#E8002D',mercedes:'#27F4D2',mclaren:'#FF80
 const TN={red_bull:'Red Bull Racing',aston_martin:'Aston Martin',rb:'Racing Bulls',kick_sauber:'Audi',alpine:'Alpine',haas:'Haas F1 Team',mclaren:'McLaren',mercedes:'Mercedes',ferrari:'Ferrari',williams:'Williams',cadillac:'Cadillac',sauber:'Audi'};
 
 const S={tab:'home',sess:'race',nf:'ALL',arts:[],picks:[],td:{},nr:null,ct:null,rt:null};
-function tagCl(t){return{RACE:'tag-race',QUALIFYING:'tag-qual',BETTING:'tag-betting',PREVIEW:'tag-preview',ANALYSIS:'tag-analysis',BREAKING:'tag-breaking'}[t]||'tag-analysis'}
+function tagCl(t){return{RACE:'tag-race',QUALIFYING:'tag-qual',BETTING:'tag-betting',PREVIEW:'tag-preview',ANALYSIS:'tag-analysis',BREAKING:'tag-breaking',RUMOUR:'tag-rumour'}[t]||'tag-analysis'}
 function tAgo(d){if(!d)return'\u2014';const ms=Date.now()-new Date(d).getTime();if(ms<0)return'just now';const m=Math.floor(ms/6e4),h=Math.floor(ms/36e5),dy=Math.floor(ms/864e5);if(m<2)return'just now';if(m<60)return m+'m ago';if(h<24)return h+'h ago';return dy+'d ago'}
 
 /* ═══ SCHEDULE DATA ═══ */
@@ -1229,6 +1233,37 @@ function selDrvNum(num){
 
 document.addEventListener('pointerdown',()=>{S._tapped=true},{once:true});
 
+/* ═══ DARK MODE ═══ */
+function toggleDark(){const d=!document.body.classList.contains('dark');document.body.classList.toggle('dark',d);localStorage.setItem('gf_dark',d?'1':'0');document.getElementById('darkBtn').textContent=d?'L':'D'}
+function initDark(){if(localStorage.getItem('gf_dark')==='1'||((!localStorage.getItem('gf_dark'))&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.body.classList.add('dark');const b=document.getElementById('darkBtn');if(b)b.textContent='L'}}
+
+/* ═══ DRIVER STATS (2026 after R3) ═══ */
+const DSTATS={
+  'Kimi Antonelli':{pts:72,wins:2,pods:3,results:[2,1,1],team:'Mercedes',tc:M,abbr:'ANT',num:12},
+  'George Russell':{pts:63,wins:1,pods:3,results:[1,2,4],team:'Mercedes',tc:M,abbr:'RUS',num:63},
+  'Charles Leclerc':{pts:49,wins:0,pods:3,results:[3,4,3],team:'Ferrari',tc:F,abbr:'LEC',num:16},
+  'Lewis Hamilton':{pts:41,wins:0,pods:1,results:[4,3,6],team:'Ferrari',tc:F,abbr:'HAM',num:44},
+  'Lando Norris':{pts:25,wins:0,pods:0,results:[5,5,5],team:'McLaren',tc:ML,abbr:'NOR',num:4},
+  'Oscar Piastri':{pts:21,wins:0,pods:1,results:['DNF','DNF',2],team:'McLaren',tc:ML,abbr:'PIA',num:81},
+  'Oliver Bearman':{pts:17,wins:0,pods:0,results:[11,10,10],team:'Haas',tc:H,abbr:'BEA',num:87},
+  'Pierre Gasly':{pts:15,wins:0,pods:0,results:[6,6,7],team:'Alpine',tc:A,abbr:'GAS',num:10},
+  'Max Verstappen':{pts:12,wins:0,pods:0,results:[8,8,8],team:'Red Bull',tc:RB,abbr:'VER',num:1},
+  'Liam Lawson':{pts:10,wins:0,pods:0,results:[14,9,9],team:'Racing Bulls',tc:TB,abbr:'LAW',num:30},
+  'Esteban Ocon':{pts:1,wins:0,pods:0,results:[10,12,12],team:'Haas',tc:H,abbr:'OCO',num:31},
+  'Carlos Sainz':{pts:2,wins:0,pods:0,results:[7,11,11],team:'Williams',tc:W,abbr:'SAI',num:55},
+  'Alexander Albon':{pts:2,wins:0,pods:0,results:[9,16,16],team:'Williams',tc:W,abbr:'ALB',num:23},
+  'Fernando Alonso':{pts:0,wins:0,pods:0,results:[13,7,'DNF'],team:'Aston Martin',tc:AM,abbr:'ALO',num:14},
+  'Lance Stroll':{pts:0,wins:0,pods:0,results:[12,13,13],team:'Aston Martin',tc:AM,abbr:'STR',num:18},
+  'Yuki Tsunoda':{pts:0,wins:0,pods:0,results:['DNF',18,17],team:'Racing Bulls',tc:TB,abbr:'TSU',num:22},
+  'Arvid Lindblad':{pts:0,wins:0,pods:0,results:[15,15,15],team:'Racing Bulls',tc:TB,abbr:'LIN',num:40},
+  'Isack Hadjar':{pts:0,wins:0,pods:0,results:[16,14,14],team:'Red Bull',tc:RB,abbr:'HAD',num:20},
+  'Jack Doohan':{pts:0,wins:0,pods:0,results:['DNF','DNF','DNF'],team:'Alpine',tc:A,abbr:'DOO',num:7},
+  'Nico Hulkenberg':{pts:0,wins:0,pods:0,results:[18,18,18],team:'Audi',tc:AU,abbr:'HUL',num:27},
+  'Gabriel Bortoleto':{pts:0,wins:0,pods:0,results:[17,17,17],team:'Audi',tc:AU,abbr:'BOR',num:5},
+  'Valtteri Bottas':{pts:0,wins:0,pods:0,results:[19,19,19],team:'Cadillac',tc:CA,abbr:'BOT',num:77},
+  'Sergio Perez':{pts:0,wins:0,pods:0,results:[20,20,20],team:'Cadillac',tc:CA,abbr:'PER',num:11},
+};
+
 /* ═══ DRIVER SHEET ═══ */
 function openSheet(d){
   const TN={S:'Soft',M:'Medium',H:'Hard',I:'Inter',W:'Wet'};
@@ -1258,7 +1293,7 @@ function toggleMap(){
 function initMapToggle(){if(sessionStorage.getItem('gf_map')==='0'){S._mapVis=true;toggleMap()}}
 
 /* ═══ BOOT ═══ */
-detectNR();initHome();initRoute();checkPush();checkLive();initMapToggle();
+detectNR();initHome();initRoute();checkPush();checkLive();initMapToggle();initDark();
 setInterval(()=>{if(S.tab==='standings')initSt()},18e5);
 setInterval(checkLive,30000);
 </script>
