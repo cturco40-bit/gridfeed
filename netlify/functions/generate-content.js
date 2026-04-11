@@ -46,17 +46,47 @@ export default async (req, context) => {
       return json({ ok: true, generated: 0, reason: 'rate_limit' });
     }
 
-    // Get 1 pending topic, ordered by priority then oldest first
-    const topics = await sb('content_topics?status=eq.pending&order=priority.desc,created_at.asc&limit=1');
-    if (!topics.length) {
+    // Get pending topics (fetch a few for diversity filtering)
+    const allPending = await sb('content_topics?status=eq.pending&order=priority.desc,created_at.asc&limit=5');
+    if (!allPending.length) {
       await logSync('generate-content', 'success', 0, 'No pending topics', Date.now() - start);
       return json({ ok: true, generated: 0 });
     }
 
-    const topic = topics[0];
+    // Topic diversity: check recent drafts and pick a topic that covers a different subject
+    const DRIVER_NAMES = ['Antonelli','Russell','Leclerc','Hamilton','Norris','Piastri','Verstappen','Hadjar','Alonso','Stroll','Gasly','Colapinto','Sainz','Albon','Ocon','Bearman','Lawson','Lindblad','Hulkenberg','Bortoleto','Perez','Bottas'];
+    function extractDrivers(text) { return DRIVER_NAMES.filter(d => text.toLowerCase().includes(d.toLowerCase())); }
+
+    const recentDraftTitles = await sb(`content_drafts?select=title&order=created_at.desc&limit=3&created_at=gt.${new Date(Date.now() - 24 * 36e5).toISOString()}`);
+    const recentDrivers = new Set();
+    recentDraftTitles.forEach(d => extractDrivers(d.title || '').forEach(dr => recentDrivers.add(dr)));
+
+    // Pick a topic that doesn't overlap with recent draft subjects
+    let topic = allPending[0]; // default to highest priority
+    for (const candidate of allPending) {
+      const candidateDrivers = extractDrivers(candidate.topic || '');
+      const overlaps = candidateDrivers.some(d => recentDrivers.has(d));
+      if (!overlaps) { topic = candidate; break; }
+    }
+
     const contentType = topic.content_type || 'analysis';
     const topicText = topic.topic || 'F1 2026 Season Analysis';
     const wordTarget = WORD_TARGETS[contentType] || '400-500';
+
+    // Subject-level dedup: check if a draft about the same subject exists in last 24h
+    const topicDrivers = extractDrivers(topicText);
+    if (topicDrivers.length > 0) {
+      const recentSameSubject = recentDraftTitles.some(d => {
+        const dDrivers = extractDrivers(d.title || '');
+        return topicDrivers.some(td => dDrivers.includes(td));
+      });
+      if (recentSameSubject && allPending.length > 1) {
+        // Skip this topic — mark as skipped, try next run with different topic
+        if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'skipped' });
+        await logSync('generate-content', 'success', 0, `Subject already covered: ${topicText.slice(0, 50)}`, Date.now() - start);
+        return json({ ok: true, generated: 0, reason: 'subject_covered' });
+      }
+    }
 
     // Mark topic as processing immediately to prevent re-pick
     if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'processing' });
