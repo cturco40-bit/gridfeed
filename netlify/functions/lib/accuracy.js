@@ -53,10 +53,10 @@ FERRARI: Charles Leclerc + Lewis Hamilton (HAMILTON IS AT FERRARI NOT MERCEDES)
 McLAREN: Lando Norris (2025 DEFENDING CHAMPION) + Oscar Piastri
 RED BULL: Max Verstappen (4x champ 2021-24, NOT 2025, NOT defending) + Isack Hadjar
 ASTON MARTIN: Fernando Alonso + Lance Stroll
-ALPINE: Pierre Gasly + Jack Doohan
+ALPINE: Pierre Gasly + Franco Colapinto (#43)
 WILLIAMS: Carlos Sainz + Alexander Albon
 HAAS: Esteban Ocon + Oliver Bearman
-RACING BULLS: Yuki Tsunoda + Arvid Lindblad (only true rookie)
+RACING BULLS: Liam Lawson + Arvid Lindblad (only true rookie)
 AUDI: Nico Hulkenberg + Gabriel Bortoleto
 CADILLAC: Sergio Perez + Valtteri Bottas`;
 
@@ -132,18 +132,103 @@ export function buildSystemPrompt(extra, outputFormat) {
   return parts.join('\n\n');
 }
 
+/* ═══ VALIDATION CONSTANTS ═══ */
+
+const BANNED_WORDS = [
+  'narrative','trajectory','fascinating','incredible','dominant','stunning',
+  'masterclass','wheelhouse','showcase','pivotal','monumental','seismic',
+  'sensational','breathtaking','remarkable','unraveling',
+  'it is worth noting','it remains to be seen','without a doubt',
+  'needless to say','make no mistake',
+];
+
+const DRIVER_SPELLINGS = {
+  'antinelli': 'Antonelli',
+  'antonneli': 'Antonelli',
+  'verstapen': 'Verstappen',
+  'leclercq': 'Leclerc',
+  'piastry': 'Piastri',
+  'hamilon': 'Hamilton',
+};
+
+// Born year → age in 2026
+const DRIVER_AGES = {
+  'antonelli': { age: 19, born: '2006-08-25' },
+  'bearman':   { age: 20, born: '2005-05-08' },
+  'hadjar':    { age: 21, born: '2004-09-28' },
+  'lindblad':  { age: 18, born: '2007' },
+  'bortoleto': { age: 21, born: '2004' },
+};
+
+const STREET_CIRCUITS = ['monaco', 'singapore', 'baku', 'azerbaijan'];
+const NOT_STREET_CIRCUITS = ['miami', 'las vegas', 'jeddah'];
+
 export function validateArticle(article) {
   const body = (article.body || '').toLowerCase();
   const title = (article.title || '').toLowerCase();
   const combined = body + ' ' + title;
 
+  // ── A. BANNED WORDS ──
+  for (const word of BANNED_WORDS) {
+    if (combined.includes(word.toLowerCase())) {
+      return { valid: false, reason: 'Banned word: ' + word };
+    }
+  }
+
+  // ── B. DRIVER NAME SPELLING ──
+  for (const [wrong, right] of Object.entries(DRIVER_SPELLINGS)) {
+    if (combined.includes(wrong)) {
+      return { valid: false, reason: `Misspelled driver: "${wrong}" (should be ${right})` };
+    }
+  }
+
+  // ── C. AGE FACTS ──
+  for (const [driver, info] of Object.entries(DRIVER_AGES)) {
+    // Check ages within 50 chars of driver name
+    const regex = new RegExp(`(\\d{1,2})-year-old`, 'g');
+    let match;
+    while ((match = regex.exec(combined)) !== null) {
+      const ageNum = parseInt(match[1]);
+      const nearby = combined.slice(Math.max(0, match.index - 50), match.index + match[0].length + 50);
+      if (nearby.includes(driver) && ageNum !== info.age) {
+        return { valid: false, reason: `Wrong age for ${driver}: said ${ageNum}, actually ${info.age}` };
+      }
+    }
+  }
+
+  // ── D. CHAMPIONSHIP CLAIMS ──
+  if (combined.includes('defending champion')) {
+    const defIdx = combined.indexOf('defending champion');
+    const nearDef = combined.slice(Math.max(0, defIdx - 60), defIdx + 80);
+    if (nearDef.includes('verstappen')) return { valid: false, reason: 'Hallucination: Verstappen called defending champion (Norris is 2025 champ)' };
+    if (nearDef.includes('russell')) return { valid: false, reason: 'Hallucination: Russell called defending champion (Norris is 2025 champ)' };
+    if (nearDef.includes('hamilton')) return { valid: false, reason: 'Hallucination: Hamilton called defending champion (Norris is 2025 champ)' };
+  }
+
+  // ── E. CIRCUIT TYPE FACTS ──
+  for (const circuit of NOT_STREET_CIRCUITS) {
+    if (combined.includes(circuit) && combined.includes('street circuit')) {
+      const streetIdx = combined.indexOf('street circuit');
+      const nearStreet = combined.slice(Math.max(0, streetIdx - 80), streetIdx + 30);
+      if (nearStreet.includes(circuit)) {
+        return { valid: false, reason: `${circuit} is NOT a street circuit` };
+      }
+    }
+  }
+
+  // ── F. LEAD SENTENCE RULE ──
+  const firstSentence = (article.body || '').split(/[.!?]/)[0] || '';
+  const SURNAMES = ['Antonelli','Russell','Leclerc','Hamilton','Norris','Piastri','Verstappen','Hadjar','Alonso','Stroll','Gasly','Colapinto','Sainz','Albon','Ocon','Bearman','Lawson','Lindblad','Hulkenberg','Bortoleto','Perez','Bottas'];
+  const hasName = SURNAMES.some(s => firstSentence.includes(s));
+  const hasNumber = /\d/.test(firstSentence);
+  if (!hasName || !hasNumber) {
+    return { valid: false, reason: 'Lead sentence missing driver name or number' };
+  }
+
+  // ── EXISTING CHECKS ──
   const fakeVenues = ['bristol', 'nashville', 'jakarta', 'delhi', 'seoul', 'bangkok', 'cape town', 'new york', 'london grand prix', 'paris grand prix'];
   for (const v of fakeVenues) {
     if (combined.includes(v)) return { valid: false, reason: `Fake venue: ${v}` };
-  }
-
-  if (combined.includes('defending') && combined.includes('verstappen')) {
-    return { valid: false, reason: 'Hallucination: Verstappen called defending champion' };
   }
 
   if (combined.includes('hamilton') && (combined.includes('his mercedes') || combined.includes('mercedes team-mate hamilton') || combined.includes('hamilton leads mercedes'))) {

@@ -25,10 +25,11 @@ export default async (req) => {
 
     const payload = JSON.stringify({
       title: body.title || 'GridFeed',
-      body: body.body || 'New draft ready for review',
-      url: body.url || '/gf-admin-drafts',
-      icon: '/favicon.png',
-      badge: '/favicon.png',
+      body: body.body || '',
+      url: body.url || 'https://gridfeed.co',
+      tag: body.tag || 'gridfeed-' + Date.now(),
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
     });
 
     const results = await Promise.allSettled(

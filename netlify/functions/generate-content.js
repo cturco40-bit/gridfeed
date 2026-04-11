@@ -100,8 +100,20 @@ export default async (req, context) => {
       const boardText = board.length ? 'LATEST SESSION:\n' + board.map(r => `P${r.position}: ${r.driver_name} (${r.team_name})`).join('\n') : '';
       const fullContext = [picksContext, liveContext, boardText].filter(Boolean).join('\n\n');
 
+      const extraGuards = `CRITICAL ACCURACY GUARDS — AI WILL BE VALIDATED AGAINST THESE:
+Antonelli is 19 years old (born August 25, 2006). NEVER call him 20, 21, or any other age.
+NEVER write "Antinelli" — the correct spelling is "Antonelli" (with two l's).
+The 2025 World Champion is Lando Norris. He is the ONLY driver who can be called "defending champion".
+Verstappen is a 4x champion (2021-2024) but is NOT defending in 2026.
+Hamilton drives for FERRARI. Russell drives for MERCEDES. They are NOT teammates.
+Miami is a semi-permanent circuit at Hard Rock Stadium, NOT a street circuit.
+The only true street circuits in 2026 are Monaco, Singapore, and Baku.
+Avoid vague references like "defending champion's former teammate" — use actual names.
+Your lead sentence MUST contain a driver surname AND a number. No exceptions.
+BANNED WORDS — using any of these will cause automatic rejection: narrative, trajectory, fascinating, incredible, dominant, stunning, masterclass, wheelhouse, showcase, pivotal, monumental, seismic, sensational, breathtaking, remarkable, unraveling.`;
+
       const systemPrompt = buildSystemPrompt(
-        null,
+        extraGuards,
         `OUTPUT: Return ONLY valid JSON with no markdown fences:\n{"title":"...","excerpt":"first 150 chars","body":"full article","tags":["RACE"],"content_type":"${contentType}"}`
       );
 
@@ -127,7 +139,7 @@ export default async (req, context) => {
       // Validation
       const validation = validateArticle(parsed);
       if (!validation.valid) {
-        if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'drafted' });
+        if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'skipped' });
         await logSync('generate-content', 'validation_failed', 0, `${topicText.slice(0,40)}: ${validation.reason}`, Date.now() - start);
         return json({ ok: true, generated: 0, reason: validation.reason });
       }

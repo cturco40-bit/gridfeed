@@ -7,7 +7,7 @@ export default async (req, context) => {
     try { body = await req.json(); } catch { return json({ ok: true, skipped: 'No body' }); }
 
     const score = body.priority_score || 0;
-    const emoji = score >= 12 ? '\ud83d\udea8' : score >= 7 ? '\u26a1' : '\ud83d\udcdd';
+    const label = score >= 12 ? 'BREAKING' : score >= 7 ? 'URGENT' : 'NEW';
 
     // Send push notification only
     const siteUrl = process.env.URL || 'https://gridfeed.co';
@@ -15,10 +15,10 @@ export default async (req, context) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: `${emoji} ${body.content_type || 'Draft'}`,
+        title: `[${label}] ${body.content_type || 'Draft'}`,
         body: body.title || 'New draft ready for review',
         url: '/gf-admin-drafts',
-        priority: score,
+        tag: 'draft-' + Date.now(),
       }),
     }, 8000);
 

@@ -1,4 +1,4 @@
-import { sb, logSync, json, makeSlug } from './lib/shared.js';
+import { sb, fetchWT, logSync, json, makeSlug } from './lib/shared.js';
 import { fixEncoding } from './lib/accuracy.js';
 
 function generateTweet(title, excerpt) {
@@ -63,6 +63,19 @@ export default async (req) => {
       console.warn('[approve-draft] Tweet creation failed:', tweetErr.message);
       await logSync('approve-draft', 'success', 1, `Published (tweet failed): "${cleanTitle}"`, Date.now() - start);
     }
+
+    // 4. Send push notification for published article (non-blocking)
+    const siteUrl = process.env.URL || 'https://gridfeed.co';
+    fetchWT(siteUrl + '/.netlify/functions/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'New Article Published',
+        body: cleanTitle,
+        url: '/#/article/' + slug,
+        tag: 'article-' + articleId,
+      }),
+    }, 8000).catch(() => {});
 
     return json({ ok: true, articleId, slug });
   } catch (err) {

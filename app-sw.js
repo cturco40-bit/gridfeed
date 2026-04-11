@@ -42,12 +42,13 @@ self.addEventListener('push', event => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
     self.registration.showNotification(data.title || 'GridFeed', {
-      body: data.body || 'New update',
+      body: data.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
+      tag: data.tag || 'gridfeed-' + Date.now(),
+      data: { url: data.url || 'https://gridfeed.co' },
       vibrate: [200, 100, 200],
-      data: { url: data.url || '/' },
-      actions: [
+      actions: data.actions || [
         { action: 'open', title: 'Open' },
         { action: 'dismiss', title: 'Dismiss' },
       ],
@@ -58,11 +59,17 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   if (event.action === 'dismiss') return;
-  const url = event.notification.data?.url || '/';
+  const url = event.notification.data?.url || 'https://gridfeed.co';
+  const fullUrl = url.startsWith('http') ? url : 'https://gridfeed.co' + url;
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(list => {
-      for (const c of list) if ('focus' in c) return c.focus();
-      if (clients.openWindow) return clients.openWindow('https://gridfeed.co' + url);
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.includes('gridfeed.co') && 'focus' in c) {
+          c.navigate(fullUrl);
+          return c.focus();
+        }
+      }
+      return clients.openWindow(fullUrl);
     })
   );
 });
