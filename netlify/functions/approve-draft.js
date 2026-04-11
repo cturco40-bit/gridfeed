@@ -1,6 +1,22 @@
 import { sb, logSync, json, makeSlug } from './lib/shared.js';
 import { fixEncoding } from './lib/accuracy.js';
 
+function generateTweet(title, excerpt) {
+  const url = 'gridfeed.co';
+  const firstSentence = (excerpt || '').split(/[.!?]/)[0]?.trim() || '';
+
+  // Try title + first sentence + URL
+  let tweet = `${title}\n\n${firstSentence}\n\n${url}`;
+  if (tweet.length <= 270) return tweet;
+
+  // Try title + URL only
+  tweet = `${title}\n\n${url}`;
+  if (tweet.length <= 270) return tweet;
+
+  // Truncate title
+  return title.slice(0, 240) + '...\n\n' + url;
+}
+
 export default async (req) => {
   const start = Date.now();
   try {
@@ -15,7 +31,7 @@ export default async (req) => {
     const cleanExcerpt = fixEncoding(excerpt || '');
     const slug = makeSlug(cleanTitle);
 
-    // 1. Insert into articles (service role key — bypasses RLS)
+    // 1. Insert into articles
     const article = await sb('articles', 'POST', {
       title: cleanTitle, slug, body: cleanBody, excerpt: cleanExcerpt,
       tags: tags || ['ANALYSIS'], author: 'GridFeed Staff',
@@ -24,7 +40,7 @@ export default async (req) => {
 
     const articleId = Array.isArray(article) ? article[0]?.id : article?.id;
     if (!articleId) {
-      await logSync('approve-draft', 'error', 0, 'Article insert failed for: ' + cleanTitle, Date.now() - start);
+      await logSync('approve-draft', 'error', 0, 'Article insert failed: ' + cleanTitle, Date.now() - start);
       return json({ error: 'Publish failed' }, 500);
     }
 
@@ -34,7 +50,20 @@ export default async (req) => {
       published_article_id: articleId, title: cleanTitle, body: cleanBody, excerpt: cleanExcerpt, tags,
     });
 
-    await logSync('approve-draft', 'success', 1, `Published: "${cleanTitle}"`, Date.now() - start);
+    // 3. Auto-generate tweet draft (non-blocking — article publishes even if this fails)
+    try {
+      const tweetText = generateTweet(cleanTitle, cleanExcerpt);
+      await sb('tweets', 'POST', {
+        article_id: articleId,
+        tweet_text: tweetText,
+        status: 'pending',
+      });
+      await logSync('approve-draft', 'success', 1, `Published + tweet draft: "${cleanTitle}"`, Date.now() - start);
+    } catch (tweetErr) {
+      console.warn('[approve-draft] Tweet creation failed:', tweetErr.message);
+      await logSync('approve-draft', 'success', 1, `Published (tweet failed): "${cleanTitle}"`, Date.now() - start);
+    }
+
     return json({ ok: true, articleId, slug });
   } catch (err) {
     await logSync('approve-draft', 'error', 0, err.message, Date.now() - start);

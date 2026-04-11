@@ -7,12 +7,6 @@ const WORD_TARGETS = {
   preview: '400-450', strategy_analysis: '350-400', championship_update: '250-300', morning_briefing: '300-350', analysis: '400-500',
 };
 
-const WEB_SEARCH_INSTRUCTION = `YOU HAVE WEB SEARCH. USE IT.
-Before writing any article, search for the specific facts you need. Do not guess. Do not invent. Search first.
-ALWAYS search for: current F1 2026 championship standings, specific race results, breaking news related to the topic.
-After searching, write using ONLY facts from search results and the context provided below.
-If search returns no data for a specific claim, omit that claim.`;
-
 function parseAIResponse(data) {
   const content = data.content || [];
   const textBlocks = content.filter(b => b.type === 'text');
@@ -27,96 +21,129 @@ function parseAIResponse(data) {
   throw new Error('No valid JSON in response');
 }
 
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < Math.min(str.length, 200); i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return 'h' + Math.abs(hash).toString(36);
+}
+
 function makeSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').slice(0, 80) + '-' + Date.now().toString(36);
 }
 
 export default async (req, context) => {
   const start = Date.now();
-  let generated = 0;
   try {
     if (!ANTHROPIC_KEY) throw new Error('ANTHROPIC_API_KEY not set');
 
-    // Process 1 topic per run (runs every 10 min, avoids timeout)
-    let topics = await sb('content_topics?status=eq.pending&order=priority.desc&limit=1');
+    // Rate limit: max 3 drafts per hour
+    const recentDrafts = await sb(`content_drafts?select=id&created_at=gt.${new Date(Date.now() - 36e5).toISOString()}`);
+    if (recentDrafts.length >= 3) {
+      await logSync('generate-content', 'success', 0, `Rate limit: ${recentDrafts.length} drafts in last hour`, Date.now() - start);
+      return json({ ok: true, generated: 0, reason: 'rate_limit' });
+    }
 
+    // Get 1 pending topic, ordered by priority then oldest first
+    const topics = await sb('content_topics?status=eq.pending&order=priority.desc,created_at.asc&limit=1');
     if (!topics.length) {
-      const hour = new Date().getUTCHours();
-      if (hour < 8) topics = [{ topic: 'Morning Briefing', content_type: 'morning_briefing', priority: 5 }];
-      else {
-        await logSync('generate-content', 'success', 0, 'No pending topics', Date.now() - start);
-        return json({ ok: true, generated: 0 });
+      await logSync('generate-content', 'success', 0, 'No pending topics', Date.now() - start);
+      return json({ ok: true, generated: 0 });
+    }
+
+    const topic = topics[0];
+    const contentType = topic.content_type || 'analysis';
+    const topicText = topic.topic || 'F1 2026 Season Analysis';
+    const wordTarget = WORD_TARGETS[contentType] || '400-500';
+
+    // Mark topic as processing immediately to prevent re-pick
+    if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'processing' });
+
+    try {
+      // Build context
+      const picks = await sb('betting_picks?status=eq.active&order=created_at.desc&limit=10');
+      const picksContext = picks.length ? 'CURRENT PICKS:\n' + picks.map(p => `${p.pick_type}: ${p.driver_name} ${p.odds} — ${p.analysis || ''}`).join('\n') : '';
+      const liveContext = await buildLiveContext();
+      const board = await sb('leaderboard?order=fetched_at.desc,position.asc&limit=10');
+      const boardText = board.length ? 'LATEST SESSION:\n' + board.map(r => `P${r.position}: ${r.driver_name} (${r.team_name})`).join('\n') : '';
+      const fullContext = [picksContext, liveContext, boardText].filter(Boolean).join('\n\n');
+
+      const systemPrompt = buildSystemPrompt(
+        null,
+        `OUTPUT: Return ONLY valid JSON with no markdown fences:\n{"title":"...","excerpt":"first 150 chars","body":"full article","tags":["RACE"],"content_type":"${contentType}"}`
+      );
+
+      const userPrompt = `Write an article about: ${topicText}\nContent type: ${contentType}\nToday: ${TODAY}\n\nUse the context below. Write ${wordTarget} words.\n\n${fullContext}\n\nReturn ONLY valid JSON:\n{"title":"...","excerpt":"...","body":"...","tags":["ANALYSIS"],"content_type":"${contentType}"}`;
+
+      const response = await fetchWT('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+      }, 45000);
+
+      const rJson = await response.json();
+      let parsed;
+      try { parsed = parseAIResponse(rJson); } catch {
+        const anyText = (rJson.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+        parsed = { title: topicText, body: anyText || '', excerpt: (anyText || '').slice(0, 150), tags: ['ANALYSIS'], content_type: contentType };
       }
-    }
 
-    // Build shared context once
-    const picks = await sb('betting_picks?status=eq.active&order=created_at.desc&limit=10');
-    let picksContext = picks.length ? 'CURRENT PICKS:\n' + picks.map(p => `${p.pick_type}: ${p.driver_name} ${p.odds} — ${p.analysis || ''}`).join('\n') : '';
-    const liveContext = await buildLiveContext();
-    const board = await sb('leaderboard?order=fetched_at.desc,position.asc&limit=10');
-    const boardText = board.length ? 'LATEST SESSION:\n' + board.map(r => `P${r.position}: ${r.driver_name} (${r.team_name})`).join('\n') : '';
-    const contextBlock = [liveContext, boardText].filter(Boolean).join('\n\n');
-    const fullContext = [picksContext, contextBlock].filter(Boolean).join('\n\n');
+      parsed.title = fixEncoding(parsed.title);
+      parsed.body = fixEncoding(parsed.body);
+      parsed.excerpt = fixEncoding(parsed.excerpt);
 
-    // Process each topic
-    for (const topic of topics) {
-      const contentType = topic.content_type || 'analysis';
-      const topicText = topic.topic || 'F1 2026 Season Analysis';
-      const wordTarget = WORD_TARGETS[contentType] || '400-500';
-
-      try {
-        const systemPrompt = buildSystemPrompt(
-          null,
-          `OUTPUT: Return ONLY valid JSON with no markdown fences:\n{"title":"...","excerpt":"first 150 chars","body":"full article","tags":["RACE"],"content_type":"${contentType}"}`
-        );
-
-        const userPrompt = `Write an article about: ${topicText}\nContent type: ${contentType}\nToday: ${TODAY}\n\nUse the context below. Write ${wordTarget} words.\n\n${fullContext}\n\nReturn ONLY valid JSON:\n{"title":"...","excerpt":"first 150 chars","body":"full article text","tags":["ANALYSIS"],"content_type":"${contentType}"}`;
-
-        const response = await fetchWT('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
-        }, 45000);
-
-        const rJson = await response.json();
-        let parsed;
-        try { parsed = parseAIResponse(rJson); } catch {
-          const anyText = (rJson.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-          parsed = { title: topicText, body: anyText || '', excerpt: (anyText || '').slice(0, 150), tags: ['ANALYSIS'], content_type: contentType };
-        }
-
-        parsed.title = fixEncoding(parsed.title);
-        parsed.body = fixEncoding(parsed.body);
-        parsed.excerpt = fixEncoding(parsed.excerpt);
-
-        const validation = validateArticle(parsed);
-        if (!validation.valid) { await logSync('generate-content', 'validation_failed', 0, `${topicText.slice(0,40)}: ${validation.reason}`, Date.now()-start); continue; }
-
-        const h = hashContent(parsed.body || '');
-        const existing = await sb(`content_hashes?hash=eq.${h}&limit=1`);
-        if (existing.length) continue;
-
-        // Insert draft as APPROVED (auto-publish)
-        await sb('content_drafts', 'POST', {
-          title: parsed.title, body: parsed.body, excerpt: parsed.excerpt,
-          tags: parsed.tags || ['ANALYSIS'], content_type: parsed.content_type || contentType,
-          review_status: 'pending', source_context: { topic: topicText, web_search: true },
-          priority_score: topic.priority || 5, generation_model: 'GridFeed Pipeline',
-          race_id: topic.race_id || null,
-        });
-
-        await sb('content_hashes', 'POST', { hash: h, type: contentType, source: 'generate-content' });
+      // Validation
+      const validation = validateArticle(parsed);
+      if (!validation.valid) {
         if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'drafted' });
+        await logSync('generate-content', 'validation_failed', 0, `${topicText.slice(0,40)}: ${validation.reason}`, Date.now() - start);
+        return json({ ok: true, generated: 0, reason: validation.reason });
+      }
 
-        // Notify
-        fetchWT('/.netlify/functions/notify-draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: parsed.title, content_type: contentType, priority_score: topic.priority || 5, excerpt: (parsed.excerpt || '').slice(0, 200) }) }, 5000).catch(() => {});
+      // Title dedup
+      const titleCheck = await sb(`content_drafts?title=eq.${encodeURIComponent(parsed.title)}&limit=1`);
+      if (titleCheck.length) {
+        if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'drafted' });
+        await logSync('generate-content', 'success', 0, 'Duplicate title skipped: ' + parsed.title.slice(0, 50), Date.now() - start);
+        return json({ ok: true, generated: 0, reason: 'duplicate_title' });
+      }
 
-        generated++;
-      } catch (e) { await logSync('generate-content', 'topic_error', 0, `${topicText.slice(0,50)}: ${e.message}`, Date.now()-start); }
+      // Content hash dedup
+      const h = simpleHash(parsed.body || '');
+      const hashCheck = await sb(`content_hashes?hash=eq.${h}&limit=1`);
+      if (hashCheck.length) {
+        if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'drafted' });
+        await logSync('generate-content', 'success', 0, 'Duplicate content hash', Date.now() - start);
+        return json({ ok: true, generated: 0, reason: 'duplicate_hash' });
+      }
+
+      // Insert draft
+      await sb('content_drafts', 'POST', {
+        title: parsed.title, body: parsed.body, excerpt: parsed.excerpt,
+        tags: parsed.tags || ['ANALYSIS'], content_type: parsed.content_type || contentType,
+        review_status: 'pending', source_context: { topic: topicText },
+        priority_score: topic.priority || 5, generation_model: 'GridFeed Pipeline',
+        race_id: topic.race_id || null,
+      });
+
+      // Record hash + mark topic drafted
+      await sb('content_hashes', 'POST', { hash: h, type: contentType, source: 'generate-content' });
+      if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'drafted' });
+
+      // Notify
+      fetchWT('/.netlify/functions/notify-draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: parsed.title, content_type: contentType, priority_score: topic.priority || 5, excerpt: (parsed.excerpt || '').slice(0, 200) }) }, 5000).catch(() => {});
+
+      await logSync('generate-content', 'success', 1, `Draft: "${parsed.title}"`, Date.now() - start);
+      return json({ ok: true, generated: 1, title: parsed.title });
+
+    } catch (e) {
+      // On error, mark topic back to pending so it can be retried
+      if (topic.id) await sb(`content_topics?id=eq.${topic.id}`, 'PATCH', { status: 'pending' });
+      await logSync('generate-content', 'topic_error', 0, `${topicText.slice(0,50)}: ${e.message}`, Date.now() - start);
+      return json({ error: e.message }, 500);
     }
-
-    await logSync('generate-content', 'success', generated, `Generated ${generated} drafts from ${topics.length} topics`, Date.now() - start);
-    return json({ ok: true, generated, topics: topics.length });
   } catch (err) {
     await logSync('generate-content', 'error', 0, err.message, Date.now() - start, err.stack);
     return json({ error: err.message }, 500);
