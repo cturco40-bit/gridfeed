@@ -739,7 +739,10 @@ function updateNotifBtn(on){
   btn.style.opacity=on?'1':'0.5';
 }
 async function regPush(){
-  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    alert('Push notifications require iOS 16.4+ and the app must be added to your Home Screen first.');
+    return;
+  }
   try{
     const reg=await navigator.serviceWorker.register('/app-sw.js');
     const existing=await reg.pushManager.getSubscription();
@@ -750,11 +753,12 @@ async function regPush(){
       updateNotifBtn(false);
       return;
     }
-    const p=await Notification.requestPermission();if(p!=='granted')return;
+    const p=await Notification.requestPermission();
+    if(p!=='granted'){alert('Notification permission denied. Enable in Settings > Notifications.');return}
     const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64toUint8(VAPID_PK)});
     await fetch('/.netlify/functions/save-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...sub.toJSON(),audience:'public'})});
     updateNotifBtn(true);
-  }catch(e){console.warn('[Push]',e)}
+  }catch(e){console.warn('[Push]',e);alert('Push setup failed: '+e.message)}
 }
 async function checkPush(){
   if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
