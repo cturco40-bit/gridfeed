@@ -176,7 +176,25 @@ const FABRICATED_SOURCING = [
   'sources confirmed', 'sources told', 'sources said', 'sources revealed',
   'a source close to', 'speaking on condition of anonymity', 'this reporter',
   'gridfeed has learned', 'gridfeed understands', 'gridfeed can reveal',
+  'indicated in briefings', 'said in briefings', 'told reporters this week',
+  'confirmed this week', 'said in a recent interview', 'told the media',
+  'in comments to gridfeed', 'speaking exclusively', 'has identified',
+  'has revealed', 'has admitted', 'sources within', 'team insiders',
+  'paddock sources', 'industry sources',
 ];
+
+const VALID_ATTRIBUTIONS = [
+  'told sky sports', 'told autosport', 'told racefans', 'told the race',
+  'told motorsport.com', 'told planetf1', 'told the bbc', 'told espn',
+  'told formula1.com', 'in a statement', 'via team statement',
+  'via press release', 'on the official f1 broadcast', 'told crash.net',
+  'told gpfans', 'speaking to sky', 'speaking to autosport',
+  'speaking to the race', 'speaking to motorsport',
+];
+
+const THESIS_VERBS = ['has identified', 'has revealed', 'believes', 'thinks', 'has admitted'];
+
+const SURNAMES = ['Antonelli','Russell','Leclerc','Hamilton','Norris','Piastri','Verstappen','Hadjar','Alonso','Stroll','Gasly','Colapinto','Sainz','Albon','Ocon','Bearman','Lawson','Lindblad','Hulkenberg','Bortoleto','Perez','Bottas'];
 
 export function validateArticle(article) {
   console.log('[validateArticle] RUNNING — title:', (article.title || '').slice(0, 60));
@@ -250,7 +268,6 @@ export function validateArticle(article) {
 
   // ── F. LEAD SENTENCE RULE ──
   const firstSentence = (article.body || '').split(/[.!?]/)[0] || '';
-  const SURNAMES = ['Antonelli','Russell','Leclerc','Hamilton','Norris','Piastri','Verstappen','Hadjar','Alonso','Stroll','Gasly','Colapinto','Sainz','Albon','Ocon','Bearman','Lawson','Lindblad','Hulkenberg','Bortoleto','Perez','Bottas'];
   const hasName = SURNAMES.some(s => firstSentence.includes(s));
   const hasNumber = /\d/.test(firstSentence);
   if (!hasName || !hasNumber) {
@@ -276,6 +293,44 @@ export function validateArticle(article) {
     }
   }
   console.log('[validateArticle] PASSED fabricated sourcing');
+
+  // ── H2. UNATTRIBUTED DIRECT QUOTES ──
+  // Find all quoted strings of 5+ words — check for valid attribution nearby
+  const quoteRegex = /["\u201c]([^"\u201d]{20,})["\u201d]/g;
+  let quoteMatch;
+  while ((quoteMatch = quoteRegex.exec(body)) !== null) {
+    const wordCount = quoteMatch[1].trim().split(/\s+/).length;
+    if (wordCount >= 5) {
+      const start = Math.max(0, quoteMatch.index - 100);
+      const end = Math.min(body.length, quoteMatch.index + quoteMatch[0].length + 100);
+      const context = body.slice(start, end);
+      const hasAttribution = VALID_ATTRIBUTIONS.some(a => context.includes(a));
+      if (!hasAttribution) {
+        console.log('[validateArticle] REJECTED — Unattributed quote:', quoteMatch[1].slice(0, 50));
+        return { valid: false, reason: 'Unattributed direct quote: "' + quoteMatch[1].slice(0, 40) + '..."' };
+      }
+    }
+  }
+  console.log('[validateArticle] PASSED unattributed quotes');
+
+  // ── H3. THESIS-AS-STATEMENT FRAMING ──
+  // Block "{Driver} has identified/revealed/believes/thinks/has admitted" in first sentence
+  // unless it has a valid attribution
+  const firstSentLower = ((article.body || '').split(/[.!?]/)[0] || '').toLowerCase();
+  for (const verb of THESIS_VERBS) {
+    for (const surname of SURNAMES) {
+      if (firstSentLower.includes(surname.toLowerCase() + ' ' + verb)) {
+        const hasAttr = VALID_ATTRIBUTIONS.some(a => firstSentLower.includes(a))
+          || firstSentLower.includes('told ') || firstSentLower.includes('in a statement')
+          || firstSentLower.includes('via ') || firstSentLower.includes('speaking to');
+        if (!hasAttr) {
+          console.log('[validateArticle] REJECTED — Thesis framing:', surname, verb);
+          return { valid: false, reason: 'Thesis framing without attribution: ' + surname + ' ' + verb };
+        }
+      }
+    }
+  }
+  console.log('[validateArticle] PASSED thesis framing');
 
   // ── I. FAKE VENUES ──
   const fakeVenues = ['bristol', 'nashville', 'jakarta', 'delhi', 'seoul', 'bangkok', 'cape town', 'new york', 'london grand prix', 'paris grand prix'];
