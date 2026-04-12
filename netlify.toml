@@ -1,72 +1,103 @@
 [build]
   publish = "."
+  functions = "netlify/functions"
 
 [functions]
-  directory = "netlify/functions"
   node_bundler = "esbuild"
 
-[functions."generate-content"]
+[functions.monitor-f1]
+  schedule = "*/5 * * * *"
   timeout = 60
 
-[functions."monitor-f1"]
+[functions.generate-content]
+  schedule = "*/10 * * * *"
   timeout = 60
 
-[functions."fetch-timing"]
-  timeout = 30
-
-[functions."fetch-race-control"]
-  timeout = 30
-
-[functions."fetch-strategy"]
-  timeout = 30
-
-[functions."fetch-weather"]
-  timeout = 30
-
-[functions."fetch-odds"]
-  timeout = 30
-
-[functions."fetch-historical"]
-  timeout = 60
-
-[functions."generate-picks"]
-  timeout = 60
-
-[functions."blog-scheduler"]
-  timeout = 60
-
-[functions."generate-tweets"]
-  timeout = 60
-
-[functions."post-tweet"]
-  timeout = 30
-
-[functions."publish-approved"]
-  timeout = 30
-
-[functions."save-subscription"]
-  timeout = 10
-
-[functions."send-push"]
-  timeout = 10
-
-[functions."fetch-intervals"]
+[functions.fetch-timing]
   schedule = "*/2 * * * *"
+  timeout = 30
 
-[functions."fetch-laps"]
+[functions.fetch-race-control]
   schedule = "*/2 * * * *"
+  timeout = 30
 
-[functions."fetch-pit"]
+[functions.fetch-strategy]
+  schedule = "*/5 * * * *"
+  timeout = 30
+
+[functions.fetch-weather]
+  schedule = "*/5 * * * *"
+  timeout = 30
+
+[functions.fetch-odds]
+  schedule = "0 */6 * * *"
+  timeout = 30
+
+[functions.fetch-intervals]
   schedule = "*/2 * * * *"
+  timeout = 30
 
-[functions."fetch-overtakes"]
+[functions.fetch-laps]
   schedule = "*/2 * * * *"
+  timeout = 30
 
-[functions."push-schedule"]
+[functions.fetch-pit]
+  schedule = "*/2 * * * *"
+  timeout = 30
+
+[functions.fetch-overtakes]
+  schedule = "*/2 * * * *"
+  timeout = 30
+
+[functions.fetch-historical]
+  timeout = 60
+
+[functions.generate-picks]
+  schedule = "0 5 * * *"
+  timeout = 60
+
+[functions.blog-scheduler]
+  schedule = "*/15 * * * *"
+  timeout = 60
+
+[functions.generate-tweets]
+  schedule = "*/10 * * * *"
+  timeout = 60
+
+[functions.post-tweet]
+  schedule = "*/5 * * * *"
+  timeout = 30
+
+[functions.publish-approved]
+  schedule = "*/5 * * * *"
+  timeout = 30
+
+[functions.push-schedule]
   schedule = "0 */1 * * *"
+  timeout = 10
+
+[functions.save-subscription]
+  timeout = 10
+
+[functions.send-push]
+  timeout = 10
+
+[functions.delete-subscription]
+  timeout = 10
+
+[functions.notify-draft]
+  timeout = 10
+
+[functions.approve-draft]
+  timeout = 30
 
 [[redirects]]
   from = "/driver/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/article/:slug"
   to = "/index.html"
   status = 200
 
@@ -83,9 +114,4 @@
 [[redirects]]
   from = "/sitemap.xml"
   to = "/.netlify/functions/sitemap"
-  status = 200
-
-[[redirects]]
-  from = "/article/:slug"
-  to = "/index.html"
   status = 200
