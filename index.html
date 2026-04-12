@@ -297,7 +297,7 @@ body.mo{overflow:hidden}
   <div class="hdr-right">
     <div class="live-badge" id="liveBadge"><div class="live-dot"></div>LIVE</div>
     <button class="notif-btn" id="darkBtn" onclick="toggleDark()" style="font-size:13px">D</button>
-    <button class="notif-btn" id="notifBtn" onclick="regPush()">\ud83d\udd15</button>
+    <button class="notif-btn" id="notifBtn" onclick="regPush()">&#128277;</button>
   </div>
 </div></header>
 
@@ -735,7 +735,7 @@ const VAPID_PK='BGiNH3DDw7QMuFmiB_Qxgn4aEPLl4k5MW9T27MzcUCjv5jxi5wy7Bb74Fdn8J2PX
 function b64toUint8(b){const p='='.repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));const a=new Uint8Array(r.length);for(let i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
 function updateNotifBtn(on){
   const btn=document.getElementById('notifBtn');if(!btn)return;
-  btn.textContent=on?'\ud83d\udd14':'\ud83d\udd15';
+  btn.textContent=on?String.fromCodePoint(0x1F514):String.fromCodePoint(0x1F515);
   btn.style.opacity=on?'1':'0.5';
 }
 async function regPush(){
