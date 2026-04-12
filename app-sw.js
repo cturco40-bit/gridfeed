@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gridfeed-v6';
+const CACHE_NAME = 'gridfeed-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +9,10 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS).catch(() => {})));
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS).catch(() => {})))
+  );
   self.skipWaiting();
 });
 
